@@ -16,6 +16,15 @@ os.environ.setdefault("APP_ENV", "testing")
 os.environ.setdefault("UPLOAD_DIR", "/tmp/costharbor_test_uploads")
 os.environ.setdefault("DOCUMENT_DIR", "/tmp/costharbor_test_docs")
 
+import app.audit.models  # noqa: F401
+
+# Import ALL models so Base.metadata knows about all tables and FKs
+# This ensures correct create/drop order
+import app.auth.models  # noqa: F401
+import app.billing.models  # noqa: F401
+import app.core.models  # noqa: F401
+import app.documents.models  # noqa: F401
+import app.sources.models  # noqa: F401
 from app.database import Base
 
 
