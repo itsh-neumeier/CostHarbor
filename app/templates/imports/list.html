@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Importe - CostHarbor{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2><i class="bi bi-cloud-download"></i> Importe</h2>
+  <a href="/imports/upload" class="btn btn-primary"><i class="bi bi-upload"></i> Datei hochladen</a>
+</div>
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead>
+      <tr><th>ID</th><th>Quelle</th><th>Status</th><th>Datensaetze</th><th>Fehler</th><th>Erstellt</th><th>Aktionen</th></tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr>
+        <td>{{ job.id }}</td>
+        <td>{{ job.source_connection.name if job.source_connection else '-' }}</td>
+        <td>
+          {% if job.status == 'completed' %}<span class="badge bg-success">Abgeschlossen</span>
+          {% elif job.status == 'failed' %}<span class="badge bg-danger">Fehlgeschlagen</span>
+          {% elif job.status == 'running' %}<span class="badge bg-warning">Laeuft</span>
+          {% else %}<span class="badge bg-secondary">Wartend</span>{% endif %}
+        </td>
+        <td>{{ job.records_imported }}</td>
+        <td>{{ job.records_failed }}</td>
+        <td>{{ job.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        <td>
+          {% if job.status == 'pending' %}
+          <form method="post" action="/imports/{{ job.id }}/run" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-play"></i> Starten</button>
+          </form>
+          {% endif %}
+          {% if job.error_message %}
+          <button class="btn btn-sm btn-outline-warning" data-bs-toggle="tooltip" title="{{ job.error_message }}"><i class="bi bi-exclamation-triangle"></i></button>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-muted">Keine Importe vorhanden.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

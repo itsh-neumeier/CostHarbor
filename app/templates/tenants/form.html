@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "Mieter bearbeiten" if tenant else "Neuer Mieter" }} - CostHarbor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <h1 class="mb-4">
+      <i class="bi bi-people"></i>
+      {{ "Mieter bearbeiten" if tenant else "Neuer Mieter" }}
+    </h1>
+
+    <form method="post" action="{{ '/tenants/%s/edit' | format(tenant.id) if tenant else '/tenants/new' }}">
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="unit_id" class="form-label">Einheit <span class="text-danger">*</span></label>
+            <select class="form-select" id="unit_id" name="unit_id" required>
+              <option value="">— Einheit w&auml;hlen —</option>
+              {% for unit in units %}
+              <option value="{{ unit.id }}"
+                      {% if tenant and tenant.unit_id == unit.id %}selected{% endif %}>
+                {{ unit.name }}{% if unit.site %} ({{ unit.site.name }}){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="name" name="name"
+                   value="{{ tenant.name if tenant else '' }}" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="email" class="form-label">E-Mail</label>
+            <input type="email" class="form-control" id="email" name="email"
+                   value="{{ tenant.email if tenant else '' }}">
+          </div>
+
+          <div class="mb-3">
+            <label for="address_line1" class="form-label">Adresse</label>
+            <input type="text" class="form-control" id="address_line1" name="address_line1"
+                   value="{{ tenant.address_line1 if tenant else '' }}">
+          </div>
+
+          <div class="row">
+            <div class="col-md-8 mb-3">
+              <label for="city" class="form-label">Stadt</label>
+              <input type="text" class="form-control" id="city" name="city"
+                     value="{{ tenant.city if tenant else '' }}">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="postal_code" class="form-label">PLZ</label>
+              <input type="text" class="form-control" id="postal_code" name="postal_code"
+                     value="{{ tenant.postal_code if tenant else '' }}">
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="move_in_date" class="form-label">Einzugsdatum</label>
+              <input type="date" class="form-control" id="move_in_date" name="move_in_date"
+                     value="{{ tenant.move_in_date.strftime('%Y-%m-%d') if tenant and tenant.move_in_date else '' }}">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="move_out_date" class="form-label">Auszugsdatum</label>
+              <input type="date" class="form-control" id="move_out_date" name="move_out_date"
+                     value="{{ tenant.move_out_date.strftime('%Y-%m-%d') if tenant and tenant.move_out_date else '' }}">
+            </div>
+          </div>
+
+          <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="is_active" name="is_active" value="1"
+                   {% if (tenant and tenant.is_active) or not tenant %}checked{% endif %}>
+            <label class="form-check-label" for="is_active">Aktiv</label>
+          </div>
+        </div>
+
+        <div class="card-footer d-flex justify-content-between">
+          <a href="/tenants" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Zur&uuml;ck
+          </a>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Speichern
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
