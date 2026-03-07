@@ -2,7 +2,7 @@
 
 import os
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 # Use SQLite for tests if no PostgreSQL available
@@ -28,8 +28,23 @@ def engine():
 
 @pytest.fixture
 def db_session(engine):
-    Session = sessionmaker(bind=engine)
+    """Provide a transactional database session that rolls back after each test."""
+    conn = engine.connect()
+    txn = conn.begin()
+    Session = sessionmaker(bind=conn)
     session = Session()
+
+    # Start a nested savepoint so that session.commit() inside
+    # the tested code doesn't actually commit to the DB.
+    session.begin_nested()
+
+    @event.listens_for(session, "after_transaction_end")
+    def restart_savepoint(sess, transaction):
+        if transaction.nested and not transaction._parent.nested:
+            sess.begin_nested()
+
     yield session
-    session.rollback()
+
     session.close()
+    txn.rollback()
+    conn.close()

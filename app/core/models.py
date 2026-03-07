@@ -3,10 +3,13 @@
 from datetime import date, datetime
 
 from sqlalchemy import (
-    Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, Text,
+    Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, JSON, Numeric, String, Text,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+
+# Use JSON for cross-DB compatibility; JSONB on PostgreSQL via with_variant
+JsonType = JSON().with_variant(JSONB, "postgresql")
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -94,7 +97,7 @@ class WaterRule(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     site_id: Mapped[int] = mapped_column(ForeignKey("sites.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    split_ratio_json: Mapped[dict] = mapped_column(JSONB, default=dict)
+    split_ratio_json: Mapped[dict] = mapped_column(JsonType, default=dict)
     water_price_cents_m3: Mapped[int] = mapped_column(Integer, default=0)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

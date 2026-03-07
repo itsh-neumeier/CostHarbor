@@ -3,9 +3,12 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, Text, func,
+    DateTime, Enum, Float, ForeignKey, Integer, JSON, Numeric, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+
+# Use JSON for cross-DB compatibility; JSONB on PostgreSQL via with_variant
+JsonType = JSON().with_variant(JSONB, "postgresql")
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -21,7 +24,7 @@ class SourceConnection(Base):
         Enum("homeassistant", "shelly", "vrm_imap", "vrm_upload", "awattar", name="source_type_enum"),
         nullable=False,
     )
-    connection_config_json: Mapped[dict] = mapped_column(JSONB, default=dict)
+    connection_config_json: Mapped[dict] = mapped_column(JsonType, default=dict)
     is_active: Mapped[bool] = mapped_column(default=True)
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     config_version: Mapped[int] = mapped_column(Integer, default=1)
@@ -69,7 +72,7 @@ class ImportJob(Base):
     records_imported: Mapped[int] = mapped_column(Integer, default=0)
     records_failed: Mapped[int] = mapped_column(Integer, default=0)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
-    job_metadata_json: Mapped[dict] = mapped_column(JSONB, default=dict)
+    job_metadata_json: Mapped[dict] = mapped_column(JsonType, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     source_connection: Mapped["SourceConnection"] = relationship(back_populates="import_jobs")
@@ -104,7 +107,7 @@ class RawMeasurement(Base):
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     value_raw: Mapped[float] = mapped_column(Float, nullable=False)
     unit: Mapped[str] = mapped_column(String(20), default="kWh")
-    metadata_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    metadata_json: Mapped[dict | None] = mapped_column(JsonType, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

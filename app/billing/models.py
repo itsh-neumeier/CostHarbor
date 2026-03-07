@@ -3,9 +3,12 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, Text, func,
+    DateTime, Enum, Float, ForeignKey, Integer, JSON, Numeric, String, Text, func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+
+# Use JSON for cross-DB compatibility; JSONB on PostgreSQL via with_variant
+JsonType = JSON().with_variant(JSONB, "postgresql")
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -33,7 +36,7 @@ class PricingRule(Base):
         Enum("grid_dynamic", "grid_fixed", "pv_self", "battery", "feedin", name="pricing_rule_type_enum"),
         nullable=False,
     )
-    parameters_json: Mapped[dict] = mapped_column(JSONB, default=dict)
+    parameters_json: Mapped[dict] = mapped_column(JsonType, default=dict)
     valid_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     valid_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     config_version: Mapped[int] = mapped_column(Integer, default=1)
@@ -59,8 +62,8 @@ class CalculationRun(Base):
     source_snapshot_version: Mapped[str] = mapped_column(String(200), default="")
     total_amount_cents: Mapped[int] = mapped_column(Integer, default=0)
     currency: Mapped[str] = mapped_column(String(3), default="EUR")
-    warnings_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    errors_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    warnings_json: Mapped[dict | None] = mapped_column(JsonType, nullable=True)
+    errors_json: Mapped[dict | None] = mapped_column(JsonType, nullable=True)
     calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finalized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -86,7 +89,7 @@ class CalculationLineItem(Base):
     quantity_unit: Mapped[str] = mapped_column(String(20), default="kWh")
     unit_price_cents: Mapped[float] = mapped_column(Float, default=0)
     total_cents: Mapped[int] = mapped_column(Integer, default=0)
-    metadata_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    metadata_json: Mapped[dict | None] = mapped_column(JsonType, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

@@ -124,7 +124,6 @@ def _add_line(db, run, category, description, quantity, qty_unit, price_cents, t
         unit_price_cents=round(price_cents, 4), total_cents=round(total_cents),
         sort_order=sort_order, metadata_json=metadata,
     )
-    db.add(item)
     run.line_items.append(item)
     return item
 
