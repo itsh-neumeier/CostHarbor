@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Neue Berechnung - CostHarbor{% endblock %}
+{% block content %}
+<h2><i class="bi bi-calculator"></i> Neue Berechnung</h2>
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+<form method="post" action="/billing/calculate" class="mt-3">
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label for="site_id" class="form-label">Standort *</label>
+      <select class="form-select" id="site_id" name="site_id" required>
+        <option value="">-- Standort waehlen --</option>
+        {% for site in sites %}
+        <option value="{{ site.id }}">{{ site.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label for="unit_id" class="form-label">Einheit *</label>
+      <select class="form-select" id="unit_id" name="unit_id" required>
+        <option value="">-- Einheit waehlen --</option>
+        {% for unit in units %}
+        <option value="{{ unit.id }}">{{ unit.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label for="tenant_id" class="form-label">Mieter *</label>
+      <select class="form-select" id="tenant_id" name="tenant_id" required>
+        <option value="">-- Mieter waehlen --</option>
+        {% for tenant in tenants %}
+        <option value="{{ tenant.id }}">{{ tenant.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label for="billing_month" class="form-label">Abrechnungsmonat *</label>
+      <input type="month" class="form-control" id="billing_month" name="billing_month" required>
+    </div>
+  </div>
+  <div class="mt-3">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-calculator"></i> Berechnung starten</button>
+    <a href="/billing" class="btn btn-secondary">Abbrechen</a>
+  </div>
+</form>
+{% endblock %}

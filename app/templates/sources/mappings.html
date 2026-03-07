@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Entity-Mapping - CostHarbor{% endblock %}
+{% block content %}
+<h2><i class="bi bi-diagram-3"></i> Entity-Mapping</h2>
+
+<div class="card mb-4">
+  <div class="card-header">Neues Mapping anlegen</div>
+  <div class="card-body">
+    <form method="post" action="/sources/mappings/new" class="row g-3">
+      <div class="col-md-3">
+        <label for="source_connection_id" class="form-label">Datenquelle</label>
+        <select class="form-select" id="source_connection_id" name="source_connection_id" required>
+          {% for src in sources %}
+          <option value="{{ src.id }}">{{ src.name }} ({{ src.source_type }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label for="unit_id" class="form-label">Einheit</label>
+        <select class="form-select" id="unit_id" name="unit_id">
+          <option value="0">-- Optional --</option>
+          {% for u in units %}
+          <option value="{{ u.id }}">{{ u.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label for="entity_id" class="form-label">Entity-ID</label>
+        <input type="text" class="form-control" id="entity_id" name="entity_id" placeholder="sensor.grid_consumption" required>
+      </div>
+      <div class="col-md-2">
+        <label for="entity_type" class="form-label">Messtyp</label>
+        <select class="form-select" id="entity_type" name="entity_type" required>
+          <option value="grid_consumption">Netzbezug</option>
+          <option value="grid_feedin">Netzeinspeisung</option>
+          <option value="pv_production">PV-Erzeugung</option>
+          <option value="battery_charge">Batterie Laden</option>
+          <option value="battery_discharge">Batterie Entladen</option>
+          <option value="water">Wasser</option>
+        </select>
+      </div>
+      <div class="col-md-2 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg"></i> Hinzufuegen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead>
+      <tr><th>Quelle</th><th>Entity-ID</th><th>Typ</th><th>Einheit</th><th>Masseinheit</th><th>Aktionen</th></tr>
+    </thead>
+    <tbody>
+      {% for m in mappings %}
+      <tr>
+        <td>{{ m.source_connection.name if m.source_connection else '-' }}</td>
+        <td><code>{{ m.entity_id }}</code></td>
+        <td><span class="badge bg-info">{{ m.entity_type }}</span></td>
+        <td>{{ m.unit_id or '-' }}</td>
+        <td>{{ m.measurement_unit }}</td>
+        <td>
+          <form method="post" action="/sources/mappings/{{ m.id }}/delete" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Mapping loeschen?"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-muted">Keine Mappings vorhanden.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

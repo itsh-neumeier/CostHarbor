@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Mieter - CostHarbor{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1><i class="bi bi-people"></i> Mieter</h1>
+  <a href="/tenants/new" class="btn btn-primary">
+    <i class="bi bi-plus-lg"></i> Neuer Mieter
+  </a>
+</div>
+
+{% if tenants %}
+<div class="table-responsive">
+  <table class="table table-striped table-hover align-middle">
+    <thead class="table-dark">
+      <tr>
+        <th>Name</th>
+        <th>Einheit</th>
+        <th>E-Mail</th>
+        <th>Einzug</th>
+        <th>Aktiv</th>
+        <th class="text-end">Aktionen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tenant in tenants %}
+      <tr>
+        <td>{{ tenant.name }}</td>
+        <td>{{ tenant.unit.name if tenant.unit else '—' }}</td>
+        <td>{{ tenant.email | default('—', true) }}</td>
+        <td>{{ tenant.move_in_date.strftime('%d.%m.%Y') if tenant.move_in_date else '—' }}</td>
+        <td>
+          {% if tenant.is_active %}
+            <span class="badge bg-success">Aktiv</span>
+          {% else %}
+            <span class="badge bg-secondary">Inaktiv</span>
+          {% endif %}
+        </td>
+        <td class="text-end text-nowrap">
+          <a href="/tenants/{{ tenant.id }}/edit" class="btn btn-sm btn-outline-secondary" title="Bearbeiten">
+            <i class="bi bi-pencil"></i> Bearbeiten
+          </a>
+          <form method="post" action="/tenants/{{ tenant.id }}/delete" class="d-inline"
+                onsubmit="return confirm(this.dataset.confirm)" data-confirm="Wirklich l&ouml;schen?">
+            <button type="submit" class="btn btn-sm btn-outline-danger" title="L&ouml;schen">
+              <i class="bi bi-trash"></i> L&ouml;schen
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+  <i class="bi bi-info-circle"></i> Noch keine Mieter angelegt.
+  <a href="/tenants/new" class="alert-link">Jetzt ersten Mieter erstellen</a>.
+</div>
+{% endif %}
+{% endblock %}

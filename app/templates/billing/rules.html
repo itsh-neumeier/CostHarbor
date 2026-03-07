@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Preisregeln - CostHarbor{% endblock %}
+{% block content %}
+<h2><i class="bi bi-tags"></i> Preisregeln</h2>
+
+<div class="card mb-4">
+  <div class="card-header">Neue Preisregel</div>
+  <div class="card-body">
+    <form method="post" action="/billing/rules/new" class="row g-3">
+      <div class="col-md-3">
+        <label for="site_id" class="form-label">Standort</label>
+        <select class="form-select" id="site_id" name="site_id" required>
+          {% for site in sites %}
+          <option value="{{ site.id }}">{{ site.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label for="name" class="form-label">Name</label>
+        <input type="text" class="form-control" id="name" name="name" required>
+      </div>
+      <div class="col-md-2">
+        <label for="rule_type" class="form-label">Regeltyp</label>
+        <select class="form-select" id="rule_type" name="rule_type" required>
+          <option value="grid_dynamic">Netz (dynamisch)</option>
+          <option value="grid_fixed">Netz (fest)</option>
+          <option value="pv_self">PV-Eigenverbrauch</option>
+          <option value="battery">Batterie</option>
+          <option value="feedin">Einspeisung</option>
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label for="parameters_json" class="form-label">Parameter (JSON)</label>
+        <input type="text" class="form-control font-monospace" id="parameters_json" name="parameters_json" value='{"price_cents_kwh": 0}'>
+      </div>
+      <div class="col-md-12">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Hinzufuegen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead>
+      <tr><th>Name</th><th>Typ</th><th>Parameter</th><th>Version</th><th>Aktionen</th></tr>
+    </thead>
+    <tbody>
+      {% for rule in rules %}
+      <tr>
+        <td>{{ rule.name }}</td>
+        <td><span class="badge bg-info">{{ rule.rule_type }}</span></td>
+        <td><code>{{ rule.parameters_json | tojson }}</code></td>
+        <td>v{{ rule.config_version }}</td>
+        <td>
+          <form method="post" action="/billing/rules/{{ rule.id }}/delete" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Regel loeschen?"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="text-muted">Keine Preisregeln vorhanden.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

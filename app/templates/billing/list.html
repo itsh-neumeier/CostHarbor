@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Berechnungen - CostHarbor{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2><i class="bi bi-calculator"></i> Berechnungen</h2>
+  <a href="/billing/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Neue Berechnung</a>
+</div>
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead>
+      <tr><th>Monat</th><th>Einheit</th><th>Mieter</th><th>Status</th><th>Summe</th><th>Berechnet am</th><th>Aktionen</th></tr>
+    </thead>
+    <tbody>
+      {% for r in runs %}
+      <tr>
+        <td>{{ r.run.billing_month }}</td>
+        <td>{{ r.unit_name }}</td>
+        <td>{{ r.tenant_name }}</td>
+        <td>
+          {% if r.run.status == 'final' %}<span class="badge bg-success">Final</span>
+          {% elif r.run.status == 'draft' %}<span class="badge bg-warning">Entwurf</span>
+          {% else %}<span class="badge bg-secondary">{{ r.run.status }}</span>{% endif %}
+        </td>
+        <td class="text-end">{{ "%.2f"|format(r.run.total_amount_cents / 100) }} EUR</td>
+        <td>{{ r.run.calculated_at.strftime('%d.%m.%Y %H:%M') if r.run.calculated_at else '-' }}</td>
+        <td>
+          <a href="/billing/{{ r.run.id }}/preview" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+          <a href="/billing/{{ r.run.id }}/pdf" class="btn btn-sm btn-outline-success"><i class="bi bi-file-pdf"></i></a>
+          {% if r.run.status == 'draft' %}
+          <form method="post" action="/billing/{{ r.run.id }}/finalize" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-warning" data-confirm="Berechnung finalisieren?"><i class="bi bi-check-lg"></i></button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-muted">Keine Berechnungen vorhanden.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
