@@ -12,13 +12,20 @@ RUN groupadd -r costharbor && useradd -r -g costharbor -m costharbor
 
 WORKDIR /app
 
+# Copy project metadata and install dependencies first (cache-friendly)
 COPY pyproject.toml ./
-RUN pip install --no-cache-dir -e ".[dev]" 2>/dev/null || pip install --no-cache-dir .
+COPY app/__init__.py ./app/
+COPY app/version.py ./app/
 
+# Install production dependencies only (not editable, no dev deps)
+RUN pip install --no-cache-dir .
+
+# Copy application code
 COPY alembic.ini ./
 COPY alembic/ ./alembic/
 COPY app/ ./app/
 
+# Create data directories
 RUN mkdir -p /data/uploads /data/documents && \
     chown -R costharbor:costharbor /app /data
 
