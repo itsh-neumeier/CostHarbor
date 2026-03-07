@@ -1,11 +1,10 @@
 """Tests for core models."""
 
-from app.core.models import Site, Unit, Tenant
+from app.core.models import Site, Tenant, Unit
 
 
 def test_site_creation(db_session):
-    site = Site(name="Test Site", address="123 Main St", city="Berlin",
-                postal_code="10115", total_area_sqm=200)
+    site = Site(name="Test Site", address="123 Main St", city="Berlin", postal_code="10115", total_area_sqm=200)
     db_session.add(site)
     db_session.flush()
     assert site.id is not None

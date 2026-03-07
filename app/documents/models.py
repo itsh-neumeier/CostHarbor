@@ -12,7 +12,9 @@ class Document(Base):
     __tablename__ = "documents"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    calculation_run_id: Mapped[int | None] = mapped_column(ForeignKey("calculation_runs.id", ondelete="SET NULL"), nullable=True)
+    calculation_run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("calculation_runs.id", ondelete="SET NULL"), nullable=True
+    )
     document_type: Mapped[str] = mapped_column(
         Enum("invoice_pdf", "preview", name="document_type_enum"),
         default="invoice_pdf",

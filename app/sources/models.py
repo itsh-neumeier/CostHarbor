@@ -3,7 +3,15 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    DateTime, Enum, Float, ForeignKey, Integer, JSON, Numeric, String, Text, func,
+    JSON,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -29,23 +37,35 @@ class SourceConnection(Base):
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     config_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
-    entity_mappings: Mapped[list["EntityMapping"]] = relationship(back_populates="source_connection", cascade="all, delete-orphan")
-    import_jobs: Mapped[list["ImportJob"]] = relationship(back_populates="source_connection", cascade="all, delete-orphan")
+    entity_mappings: Mapped[list["EntityMapping"]] = relationship(
+        back_populates="source_connection", cascade="all, delete-orphan"
+    )
+    import_jobs: Mapped[list["ImportJob"]] = relationship(
+        back_populates="source_connection", cascade="all, delete-orphan"
+    )
 
 
 class EntityMapping(Base):
     __tablename__ = "entity_mappings"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    source_connection_id: Mapped[int] = mapped_column(ForeignKey("source_connections.id", ondelete="CASCADE"), nullable=False)
+    source_connection_id: Mapped[int] = mapped_column(
+        ForeignKey("source_connections.id", ondelete="CASCADE"), nullable=False
+    )
     unit_id: Mapped[int | None] = mapped_column(ForeignKey("units.id", ondelete="SET NULL"), nullable=True)
     entity_id: Mapped[str] = mapped_column(String(500), nullable=False)
     entity_type: Mapped[str] = mapped_column(
         Enum(
-            "grid_consumption", "grid_feedin", "battery_charge", "battery_discharge",
-            "pv_production", "water",
+            "grid_consumption",
+            "grid_feedin",
+            "battery_charge",
+            "battery_discharge",
+            "pv_production",
+            "water",
             name="entity_type_enum",
         ),
         nullable=False,
@@ -53,7 +73,9 @@ class EntityMapping(Base):
     measurement_unit: Mapped[str] = mapped_column(String(20), default="kWh")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     source_connection: Mapped["SourceConnection"] = relationship(back_populates="entity_mappings")
 
@@ -62,7 +84,9 @@ class ImportJob(Base):
     __tablename__ = "import_jobs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    source_connection_id: Mapped[int] = mapped_column(ForeignKey("source_connections.id", ondelete="CASCADE"), nullable=False)
+    source_connection_id: Mapped[int] = mapped_column(
+        ForeignKey("source_connections.id", ondelete="CASCADE"), nullable=False
+    )
     status: Mapped[str] = mapped_column(
         Enum("pending", "running", "completed", "failed", "partial", name="import_status_enum"),
         default="pending",
@@ -76,7 +100,9 @@ class ImportJob(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     source_connection: Mapped["SourceConnection"] = relationship(back_populates="import_jobs")
-    imported_files: Mapped[list["ImportedFile"]] = relationship(back_populates="import_job", cascade="all, delete-orphan")
+    imported_files: Mapped[list["ImportedFile"]] = relationship(
+        back_populates="import_job", cascade="all, delete-orphan"
+    )
 
 
 class ImportedFile(Base):
@@ -102,8 +128,12 @@ class RawMeasurement(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     import_job_id: Mapped[int] = mapped_column(ForeignKey("import_jobs.id", ondelete="CASCADE"), nullable=False)
-    source_connection_id: Mapped[int] = mapped_column(ForeignKey("source_connections.id", ondelete="CASCADE"), nullable=False)
-    entity_mapping_id: Mapped[int | None] = mapped_column(ForeignKey("entity_mappings.id", ondelete="SET NULL"), nullable=True)
+    source_connection_id: Mapped[int] = mapped_column(
+        ForeignKey("source_connections.id", ondelete="CASCADE"), nullable=False
+    )
+    entity_mapping_id: Mapped[int | None] = mapped_column(
+        ForeignKey("entity_mappings.id", ondelete="SET NULL"), nullable=True
+    )
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     value_raw: Mapped[float] = mapped_column(Float, nullable=False)
     unit: Mapped[str] = mapped_column(String(20), default="kWh")
@@ -115,12 +145,18 @@ class NormalizedMeasurement(Base):
     __tablename__ = "normalized_measurements"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    raw_measurement_id: Mapped[int | None] = mapped_column(ForeignKey("raw_measurements.id", ondelete="SET NULL"), nullable=True)
+    raw_measurement_id: Mapped[int | None] = mapped_column(
+        ForeignKey("raw_measurements.id", ondelete="SET NULL"), nullable=True
+    )
     unit_id: Mapped[int] = mapped_column(ForeignKey("units.id", ondelete="CASCADE"), nullable=False)
     measurement_type: Mapped[str] = mapped_column(
         Enum(
-            "grid_consumption_kwh", "grid_feedin_kwh", "battery_charge_kwh",
-            "battery_discharge_kwh", "pv_production_kwh", "water_m3",
+            "grid_consumption_kwh",
+            "grid_feedin_kwh",
+            "battery_charge_kwh",
+            "battery_discharge_kwh",
+            "pv_production_kwh",
+            "water_m3",
             name="measurement_type_enum",
         ),
         nullable=False,

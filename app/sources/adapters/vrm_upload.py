@@ -6,15 +6,19 @@ Victron VRM exports are CSV files with kWh energy data, typically containing:
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from io import StringIO
 
 import pandas as pd
 from sqlalchemy.orm import Session
 
 from app.sources.models import (
-    EntityMapping, ImportJob, ImportedFile, NormalizedMeasurement,
-    RawMeasurement, SourceConnection,
+    EntityMapping,
+    ImportedFile,
+    ImportJob,
+    NormalizedMeasurement,
+    RawMeasurement,
+    SourceConnection,
 )
 
 logger = logging.getLogger(__name__)
@@ -26,7 +30,7 @@ def import_vrm_csv(db: Session, job: ImportJob, source: SourceConnection) -> Non
     if not imported_file:
         raise ValueError("No file found for this import job")
 
-    with open(imported_file.stored_path, "r", encoding="utf-8-sig") as f:
+    with open(imported_file.stored_path, encoding="utf-8-sig") as f:
         content = f.read()
 
     df = _parse_vrm_csv(content)
@@ -35,9 +39,13 @@ def import_vrm_csv(db: Session, job: ImportJob, source: SourceConnection) -> Non
         job.records_imported = 0
         return
 
-    mappings = db.query(EntityMapping).filter(
-        EntityMapping.source_connection_id == source.id,
-    ).all()
+    mappings = (
+        db.query(EntityMapping)
+        .filter(
+            EntityMapping.source_connection_id == source.id,
+        )
+        .all()
+    )
 
     # Build column-to-mapping lookup
     col_map = _build_column_mapping(df.columns.tolist(), mappings)
@@ -130,7 +138,8 @@ def _parse_vrm_csv(content: str) -> pd.DataFrame:
 
 
 def _build_column_mapping(
-    columns: list[str], mappings: list[EntityMapping],
+    columns: list[str],
+    mappings: list[EntityMapping],
 ) -> dict:
     """Map CSV columns to entity mappings by matching entity_id to column names."""
     col_map = {}

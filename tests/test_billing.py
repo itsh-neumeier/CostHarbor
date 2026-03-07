@@ -1,10 +1,6 @@
 """Tests for billing engine."""
 
-from datetime import datetime, timezone
-
-from app.billing.models import CalculationRun, CalculationLineItem, PricingRule
-from app.core.models import Site, Unit, Tenant, RecurringCostItem
-from app.sources.models import NormalizedMeasurement
+from app.core.models import RecurringCostItem, Site, Tenant, Unit
 
 
 def test_fixed_cost_allocation(db_session):
@@ -22,13 +18,16 @@ def test_fixed_cost_allocation(db_session):
     db_session.flush()
 
     cost = RecurringCostItem(
-        site_id=site.id, name="Grundsteuer",
-        amount_cents=10000, allocation_method="area",
+        site_id=site.id,
+        name="Grundsteuer",
+        amount_cents=10000,
+        allocation_method="area",
     )
     db_session.add(cost)
     db_session.flush()
 
     from app.billing.engine import calculate_billing
+
     run = calculate_billing(db_session, site.id, unit.id, tenant.id, "2026-02")
 
     assert run is not None
@@ -54,6 +53,7 @@ def test_calculation_run_versioning(db_session):
     db_session.flush()
 
     from app.billing.engine import calculate_billing
+
     run = calculate_billing(db_session, site.id, unit.id, tenant.id, "2026-01")
 
     assert run.app_version != ""

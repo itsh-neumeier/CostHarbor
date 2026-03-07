@@ -6,8 +6,8 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.orm import Session
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
@@ -30,6 +30,7 @@ async def lifespan(app: FastAPI):
 
     # Create initial admin user if no users exist
     from app.auth.security import create_initial_admin
+
     create_initial_admin()
 
     logger.info("CostHarbor v%s started", VERSION)
@@ -57,13 +58,13 @@ def create_app() -> FastAPI:
     application.state.templates = templates
 
     # Register routes
-    from app.auth.routes import router as auth_router
-    from app.core.routes import router as core_router
-    from app.sources.routes import router as sources_router
-    from app.billing.routes import router as billing_router
     from app.audit.routes import router as audit_router
+    from app.auth.routes import router as auth_router
+    from app.billing.routes import router as billing_router
+    from app.core.routes import router as core_router
     from app.documents.routes import router as documents_router
     from app.sources.adapters.vrm_imap_routes import router as vrm_imap_router
+    from app.sources.routes import router as sources_router
 
     application.include_router(auth_router)
     application.include_router(core_router)
@@ -79,9 +80,9 @@ def create_app() -> FastAPI:
         if not user:
             return templates.TemplateResponse("dashboard.html", {"request": request, "user": None})
 
-        from app.core.models import Site, Unit, Tenant
-        from app.sources.models import SourceConnection, ImportJob
         from app.billing.models import CalculationRun
+        from app.core.models import Site, Tenant, Unit
+        from app.sources.models import ImportJob, SourceConnection
 
         stats = {
             "sites": db.query(Site).count(),
@@ -93,28 +94,37 @@ def create_app() -> FastAPI:
         recent_imports = []
         for job in db.query(ImportJob).order_by(ImportJob.created_at.desc()).limit(5).all():
             src = db.get(SourceConnection, job.source_connection_id)
-            recent_imports.append({
-                "source_name": src.name if src else "?",
-                "status": job.status,
-                "created_at": job.created_at,
-                "records_imported": job.records_imported,
-            })
+            recent_imports.append(
+                {
+                    "source_name": src.name if src else "?",
+                    "status": job.status,
+                    "created_at": job.created_at,
+                    "records_imported": job.records_imported,
+                }
+            )
 
         recent_calcs = []
         for run in db.query(CalculationRun).order_by(CalculationRun.created_at.desc()).limit(5).all():
             u = db.get(Unit, run.unit_id)
-            recent_calcs.append({
-                "billing_month": run.billing_month,
-                "unit_name": u.name if u else "?",
-                "status": run.status,
-                "total_amount_cents": run.total_amount_cents,
-            })
+            recent_calcs.append(
+                {
+                    "billing_month": run.billing_month,
+                    "unit_name": u.name if u else "?",
+                    "status": run.status,
+                    "total_amount_cents": run.total_amount_cents,
+                }
+            )
 
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request, "user": user,
-            "stats": stats, "recent_imports": recent_imports,
-            "recent_calculations": recent_calcs,
-        })
+        return templates.TemplateResponse(
+            "dashboard.html",
+            {
+                "request": request,
+                "user": user,
+                "stats": stats,
+                "recent_imports": recent_imports,
+                "recent_calculations": recent_calcs,
+            },
+        )
 
     return application
 

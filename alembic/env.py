@@ -3,8 +3,9 @@
 import os
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
+
+from alembic import context
 
 config = context.config
 
@@ -17,16 +18,20 @@ if db_url:
     config.set_main_option("sqlalchemy.url", db_url)
 
 # Import all models so Alembic sees them
-from app.database import Base
-from app.auth.models import User  # noqa: F401
-from app.core.models import Site, Unit, Tenant, RecurringCostItem, WaterRule  # noqa: F401
-from app.sources.models import (  # noqa: F401
-    SourceConnection, EntityMapping, ImportJob, ImportedFile,
-    RawMeasurement, NormalizedMeasurement,
-)
-from app.billing.models import HourlyPrice, PricingRule, CalculationRun, CalculationLineItem  # noqa: F401
 from app.audit.models import AuditLog  # noqa: F401
+from app.auth.models import User  # noqa: F401
+from app.billing.models import CalculationLineItem, CalculationRun, HourlyPrice, PricingRule  # noqa: F401
+from app.core.models import RecurringCostItem, Site, Tenant, Unit, WaterRule  # noqa: F401
+from app.database import Base
 from app.documents.models import Document  # noqa: F401
+from app.sources.models import (  # noqa: F401
+    EntityMapping,
+    ImportedFile,
+    ImportJob,
+    NormalizedMeasurement,
+    RawMeasurement,
+    SourceConnection,
+)
 
 target_metadata = Base.metadata
 

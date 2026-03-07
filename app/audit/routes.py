@@ -32,8 +32,14 @@ async def audit_list(
     )
     total_pages = max(1, (total + ITEMS_PER_PAGE - 1) // ITEMS_PER_PAGE)
 
-    return request.app.state.templates.TemplateResponse("audit/list.html", {
-        "request": request, "user": user,
-        "entries": entries, "page": page, "total_pages": total_pages,
-        "active_page": "audit",
-    })
+    return request.app.state.templates.TemplateResponse(
+        "audit/list.html",
+        {
+            "request": request,
+            "user": user,
+            "entries": entries,
+            "page": page,
+            "total_pages": total_pages,
+            "active_page": "audit",
+        },
+    )

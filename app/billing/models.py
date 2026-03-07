@@ -3,7 +3,14 @@
 from datetime import datetime
 
 from sqlalchemy import (
-    DateTime, Enum, Float, ForeignKey, Integer, JSON, Numeric, String, Text, func,
+    JSON,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -41,7 +48,9 @@ class PricingRule(Base):
     valid_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     config_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
 
 class CalculationRun(Base):
@@ -68,18 +77,26 @@ class CalculationRun(Base):
     finalized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    line_items: Mapped[list["CalculationLineItem"]] = relationship(back_populates="calculation_run", cascade="all, delete-orphan")
+    line_items: Mapped[list["CalculationLineItem"]] = relationship(
+        back_populates="calculation_run", cascade="all, delete-orphan"
+    )
 
 
 class CalculationLineItem(Base):
     __tablename__ = "calculation_line_items"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    calculation_run_id: Mapped[int] = mapped_column(ForeignKey("calculation_runs.id", ondelete="CASCADE"), nullable=False)
+    calculation_run_id: Mapped[int] = mapped_column(
+        ForeignKey("calculation_runs.id", ondelete="CASCADE"), nullable=False
+    )
     category: Mapped[str] = mapped_column(
         Enum(
-            "electricity_grid", "electricity_pv", "electricity_battery",
-            "electricity_feedin", "water", "fixed_cost",
+            "electricity_grid",
+            "electricity_pv",
+            "electricity_battery",
+            "electricity_feedin",
+            "water",
+            "fixed_cost",
             name="line_item_category_enum",
         ),
         nullable=False,

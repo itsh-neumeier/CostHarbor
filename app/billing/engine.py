@@ -10,7 +10,7 @@ Calculates monthly bills for a given unit/tenant based on:
 import hashlib
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -45,8 +45,8 @@ def calculate_billing(
     else:
         next_year, next_month = year, month + 1
 
-    period_start = datetime(year, month, 1, tzinfo=timezone.utc)
-    period_end = datetime(next_year, next_month, 1, tzinfo=timezone.utc)
+    period_start = datetime(year, month, 1, tzinfo=UTC)
+    period_end = datetime(next_year, next_month, 1, tzinfo=UTC)
 
     # Load pricing rules for site
     rules = db.query(PricingRule).filter(PricingRule.site_id == site_id).all()
@@ -65,7 +65,7 @@ def calculate_billing(
         config_version=str(site.config_version),
         rules_version=rules_hash,
         source_snapshot_version="",
-        calculated_at=datetime.now(timezone.utc),
+        calculated_at=datetime.now(UTC),
     )
     db.add(run)
     db.flush()
@@ -102,12 +102,17 @@ def calculate_billing(
 
 
 def _get_measurements(db: Session, unit_id: int, mtype: str, start: datetime, end: datetime):
-    return db.query(NormalizedMeasurement).filter(
-        NormalizedMeasurement.unit_id == unit_id,
-        NormalizedMeasurement.measurement_type == mtype,
-        NormalizedMeasurement.period_start >= start,
-        NormalizedMeasurement.period_end <= end,
-    ).order_by(NormalizedMeasurement.period_start).all()
+    return (
+        db.query(NormalizedMeasurement)
+        .filter(
+            NormalizedMeasurement.unit_id == unit_id,
+            NormalizedMeasurement.measurement_type == mtype,
+            NormalizedMeasurement.period_start >= start,
+            NormalizedMeasurement.period_end <= end,
+        )
+        .order_by(NormalizedMeasurement.period_start)
+        .all()
+    )
 
 
 def _find_rule(rules: list[PricingRule], rule_type: str) -> PricingRule | None:
@@ -119,10 +124,15 @@ def _find_rule(rules: list[PricingRule], rule_type: str) -> PricingRule | None:
 
 def _add_line(db, run, category, description, quantity, qty_unit, price_cents, total_cents, sort_order, metadata=None):
     item = CalculationLineItem(
-        calculation_run_id=run.id, category=category, description=description,
-        quantity=round(quantity, 4), quantity_unit=qty_unit,
-        unit_price_cents=round(price_cents, 4), total_cents=round(total_cents),
-        sort_order=sort_order, metadata_json=metadata,
+        calculation_run_id=run.id,
+        category=category,
+        description=description,
+        quantity=round(quantity, 4),
+        quantity_unit=qty_unit,
+        unit_price_cents=round(price_cents, 4),
+        total_cents=round(total_cents),
+        sort_order=sort_order,
+        metadata_json=metadata,
     )
     run.line_items.append(item)
     return item
@@ -152,8 +162,18 @@ def _calc_grid(db, run, unit_id, start, end, rules, warnings, so):
 
         so += 1
         avg_price = total_cost / total_kwh if total_kwh else 0
-        _add_line(db, run, "electricity_grid", "Netzbezug (dynamisch)", total_kwh, "kWh", avg_price, total_cost, so,
-                  {"pricing": "dynamic", "markup_cents": markup})
+        _add_line(
+            db,
+            run,
+            "electricity_grid",
+            "Netzbezug (dynamisch)",
+            total_kwh,
+            "kWh",
+            avg_price,
+            total_cost,
+            so,
+            {"pricing": "dynamic", "markup_cents": markup},
+        )
 
     elif rule and rule.rule_type == "grid_fixed":
         params = rule.parameters_json or {}
@@ -210,7 +230,9 @@ def _calc_feedin(db, run, unit_id, start, end, rules, warnings, so):
     total = sum(m.value for m in measurements)
     if total > 0 and price:
         so += 1
-        _add_line(db, run, "electricity_feedin", "Netzeinspeisung (Gutschrift)", total, "kWh", -price, -(total * price), so)
+        _add_line(
+            db, run, "electricity_feedin", "Netzeinspeisung (Gutschrift)", total, "kWh", -price, -(total * price), so
+        )
     return so
 
 
@@ -240,7 +262,7 @@ def _calc_water(db, run, site_id, unit_id, start, end, warnings, so):
     price = water_rule.water_price_cents_m3
     if unit_m3 > 0 and price:
         so += 1
-        _add_line(db, run, "water", f"Wasserverbrauch ({ratio*100:.0f}%)", unit_m3, "m3", price, unit_m3 * price, so)
+        _add_line(db, run, "water", f"Wasserverbrauch ({ratio * 100:.0f}%)", unit_m3, "m3", price, unit_m3 * price, so)
     return so
 
 
@@ -263,6 +285,16 @@ def _calc_fixed(db, run, site, unit, warnings, so):
 
         allocated = round(ci.amount_cents * ratio)
         so += 1
-        _add_line(db, run, "fixed_cost", f"{ci.name} ({ratio*100:.1f}%)", 1, "Monat", allocated, allocated, so,
-                  {"method": ci.allocation_method, "ratio": ratio})
+        _add_line(
+            db,
+            run,
+            "fixed_cost",
+            f"{ci.name} ({ratio * 100:.1f}%)",
+            1,
+            "Monat",
+            allocated,
+            allocated,
+            so,
+            {"method": ci.allocation_method, "ratio": ratio},
+        )
     return so

@@ -1,6 +1,6 @@
 """Tests for Shelly CSV parser."""
 
-from app.sources.adapters.shelly_csv import _parse_shelly_csv, _aggregate_hourly
+from app.sources.adapters.shelly_csv import _aggregate_hourly, _parse_shelly_csv
 
 
 def test_parse_empty_csv():

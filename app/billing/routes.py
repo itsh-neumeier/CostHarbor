@@ -34,14 +34,22 @@ async def billing_list(request: Request, db: Session = Depends(get_db)):
     for run in runs:
         unit = db.get(Unit, run.unit_id)
         tenant = db.get(Tenant, run.tenant_id)
-        enriched.append({
-            "run": run,
-            "unit_name": unit.name if unit else "?",
-            "tenant_name": tenant.name if tenant else "?",
-        })
-    return request.app.state.templates.TemplateResponse("billing/list.html", {
-        "request": request, "user": user, "runs": enriched, "active_page": "billing",
-    })
+        enriched.append(
+            {
+                "run": run,
+                "unit_name": unit.name if unit else "?",
+                "tenant_name": tenant.name if tenant else "?",
+            }
+        )
+    return request.app.state.templates.TemplateResponse(
+        "billing/list.html",
+        {
+            "request": request,
+            "user": user,
+            "runs": enriched,
+            "active_page": "billing",
+        },
+    )
 
 
 @router.get("/billing/new")
@@ -52,18 +60,26 @@ async def billing_new(request: Request, db: Session = Depends(get_db)):
     sites = db.query(Site).order_by(Site.name).all()
     units = db.query(Unit).order_by(Unit.name).all()
     tenants = db.query(Tenant).filter(Tenant.is_active.is_(True)).order_by(Tenant.name).all()
-    return request.app.state.templates.TemplateResponse("billing/new.html", {
-        "request": request, "user": user,
-        "sites": sites, "units": units, "tenants": tenants,
-        "active_page": "billing",
-    })
+    return request.app.state.templates.TemplateResponse(
+        "billing/new.html",
+        {
+            "request": request,
+            "user": user,
+            "sites": sites,
+            "units": units,
+            "tenants": tenants,
+            "active_page": "billing",
+        },
+    )
 
 
 @router.post("/billing/calculate")
 async def billing_calculate(
     request: Request,
-    site_id: int = Form(...), unit_id: int = Form(...),
-    tenant_id: int = Form(...), billing_month: str = Form(...),
+    site_id: int = Form(...),
+    unit_id: int = Form(...),
+    tenant_id: int = Form(...),
+    billing_month: str = Form(...),
     db: Session = Depends(get_db),
 ):
     user, redirect = _require_auth(request)
@@ -74,10 +90,15 @@ async def billing_calculate(
 
     try:
         run = calculate_billing(db, site_id, unit_id, tenant_id, billing_month)
-        db.add(AuditLog(
-            user_id=user["id"], action="calculate", entity_type="calculation_run",
-            entity_id=run.id, ip_address=request.client.host if request.client else None,
-        ))
+        db.add(
+            AuditLog(
+                user_id=user["id"],
+                action="calculate",
+                entity_type="calculation_run",
+                entity_id=run.id,
+                ip_address=request.client.host if request.client else None,
+            )
+        )
         db.commit()
         return RedirectResponse(url=f"/billing/{run.id}/preview", status_code=303)
     except Exception as e:
@@ -85,11 +106,18 @@ async def billing_calculate(
         sites = db.query(Site).order_by(Site.name).all()
         units = db.query(Unit).order_by(Unit.name).all()
         tenants = db.query(Tenant).filter(Tenant.is_active.is_(True)).order_by(Tenant.name).all()
-        return request.app.state.templates.TemplateResponse("billing/new.html", {
-            "request": request, "user": user,
-            "sites": sites, "units": units, "tenants": tenants,
-            "error": str(e), "active_page": "billing",
-        })
+        return request.app.state.templates.TemplateResponse(
+            "billing/new.html",
+            {
+                "request": request,
+                "user": user,
+                "sites": sites,
+                "units": units,
+                "tenants": tenants,
+                "error": str(e),
+                "active_page": "billing",
+            },
+        )
 
 
 @router.get("/billing/{run_id}/preview")
@@ -103,12 +131,19 @@ async def billing_preview(request: Request, run_id: int, db: Session = Depends(g
     unit = db.get(Unit, run.unit_id)
     tenant = db.get(Tenant, run.tenant_id)
     site = db.get(Site, run.site_id)
-    return request.app.state.templates.TemplateResponse("billing/preview.html", {
-        "request": request, "user": user,
-        "run": run, "unit": unit, "tenant": tenant, "site": site,
-        "line_items": run.line_items,
-        "active_page": "billing",
-    })
+    return request.app.state.templates.TemplateResponse(
+        "billing/preview.html",
+        {
+            "request": request,
+            "user": user,
+            "run": run,
+            "unit": unit,
+            "tenant": tenant,
+            "site": site,
+            "line_items": run.line_items,
+            "active_page": "billing",
+        },
+    )
 
 
 @router.post("/billing/{run_id}/finalize")
@@ -120,10 +155,15 @@ async def billing_finalize(request: Request, run_id: int, db: Session = Depends(
     if run and run.status == "draft":
         run.status = "final"
         run.finalized_at = datetime.now()
-        db.add(AuditLog(
-            user_id=user["id"], action="finalize", entity_type="calculation_run",
-            entity_id=run.id, ip_address=request.client.host if request.client else None,
-        ))
+        db.add(
+            AuditLog(
+                user_id=user["id"],
+                action="finalize",
+                entity_type="calculation_run",
+                entity_id=run.id,
+                ip_address=request.client.host if request.client else None,
+            )
+        )
         db.commit()
     return RedirectResponse(url="/billing", status_code=303)
 

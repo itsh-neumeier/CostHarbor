@@ -22,8 +22,18 @@ CATEGORY_LABELS = {
 }
 
 MONTH_NAMES = {
-    1: "Januar", 2: "Februar", 3: "Maerz", 4: "April", 5: "Mai", 6: "Juni",
-    7: "Juli", 8: "August", 9: "September", 10: "Oktober", 11: "November", 12: "Dezember",
+    1: "Januar",
+    2: "Februar",
+    3: "Maerz",
+    4: "April",
+    5: "Mai",
+    6: "Juni",
+    7: "Juli",
+    8: "August",
+    9: "September",
+    10: "Oktober",
+    11: "November",
+    12: "Dezember",
 }
 
 
@@ -51,6 +61,7 @@ def generate_pdf(
 
     try:
         from weasyprint import HTML
+
         return HTML(string=html).write_pdf()
     except ImportError:
         logger.warning("WeasyPrint not installed - returning HTML as fallback")
@@ -67,13 +78,13 @@ def _build_html(run, site, unit, tenant, categories, month_name, year) -> str:
 
     cat_html = ""
     for cat_data in categories.values():
-        cat_html += f'<h2>{cat_data["label"]}</h2>\n<table>\n'
+        cat_html += f"<h2>{cat_data['label']}</h2>\n<table>\n"
         cat_html += '<tr><th>Beschreibung</th><th class="r">Menge</th><th>Einheit</th><th class="r">Einzelpreis</th><th class="r">Summe</th></tr>\n'
         for it in cat_data["items"]:
             cat_html += (
-                f'<tr><td>{it.description}</td>'
+                f"<tr><td>{it.description}</td>"
                 f'<td class="r">{it.quantity:.2f}</td>'
-                f'<td>{it.quantity_unit}</td>'
+                f"<td>{it.quantity_unit}</td>"
                 f'<td class="r">{it.unit_price_cents / 100:.4f} EUR</td>'
                 f'<td class="r">{it.total_cents / 100:.2f} EUR</td></tr>\n'
             )

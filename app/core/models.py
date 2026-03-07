@@ -3,7 +3,16 @@
 from datetime import date, datetime
 
 from sqlalchemy import (
-    Boolean, Date, DateTime, Enum, Float, ForeignKey, Integer, JSON, Numeric, String, Text,
+    JSON,
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -28,10 +37,14 @@ class Site(Base):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     config_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     units: Mapped[list["Unit"]] = relationship(back_populates="site", cascade="all, delete-orphan")
-    recurring_cost_items: Mapped[list["RecurringCostItem"]] = relationship(back_populates="site", cascade="all, delete-orphan")
+    recurring_cost_items: Mapped[list["RecurringCostItem"]] = relationship(
+        back_populates="site", cascade="all, delete-orphan"
+    )
     water_rules: Mapped[list["WaterRule"]] = relationship(back_populates="site", cascade="all, delete-orphan")
 
 
@@ -44,7 +57,9 @@ class Unit(Base):
     area_sqm: Mapped[float] = mapped_column(Numeric(10, 2), default=0)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     site: Mapped["Site"] = relationship(back_populates="units")
     tenants: Mapped[list["Tenant"]] = relationship(back_populates="unit", cascade="all, delete-orphan")
@@ -65,7 +80,9 @@ class Tenant(Base):
     move_out_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     unit: Mapped["Unit"] = relationship(back_populates="tenants")
 
@@ -86,7 +103,9 @@ class RecurringCostItem(Base):
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     site: Mapped["Site"] = relationship(back_populates="recurring_cost_items")
 
@@ -101,6 +120,8 @@ class WaterRule(Base):
     water_price_cents_m3: Mapped[int] = mapped_column(Integer, default=0)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     site: Mapped["Site"] = relationship(back_populates="water_rules")

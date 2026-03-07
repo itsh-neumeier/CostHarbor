@@ -5,14 +5,18 @@ Aggregates minute-level phase data into hourly normalized measurements.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from io import StringIO
 
 import pandas as pd
 from sqlalchemy.orm import Session
 
 from app.sources.models import (
-    EntityMapping, ImportJob, ImportedFile, NormalizedMeasurement, RawMeasurement,
+    EntityMapping,
+    ImportedFile,
+    ImportJob,
+    NormalizedMeasurement,
+    RawMeasurement,
     SourceConnection,
 )
 
@@ -26,7 +30,7 @@ def import_shelly_csv(db: Session, job: ImportJob, source: SourceConnection) -> 
     if not imported_file:
         raise ValueError("No file found for this import job")
 
-    with open(imported_file.stored_path, "r", encoding="utf-8-sig") as f:
+    with open(imported_file.stored_path, encoding="utf-8-sig") as f:
         content = f.read()
 
     df = _parse_shelly_csv(content)
@@ -36,9 +40,13 @@ def import_shelly_csv(db: Session, job: ImportJob, source: SourceConnection) -> 
         return
 
     # Get entity mappings for this source
-    mappings = db.query(EntityMapping).filter(
-        EntityMapping.source_connection_id == source.id,
-    ).all()
+    mappings = (
+        db.query(EntityMapping)
+        .filter(
+            EntityMapping.source_connection_id == source.id,
+        )
+        .all()
+    )
 
     # Store raw data
     for _, row in df.iterrows():
@@ -155,12 +163,16 @@ def _aggregate_hourly(df: pd.DataFrame) -> pd.DataFrame:
     df["hour"] = df["timestamp"].dt.floor("h")
 
     # Calculate deltas (difference between max and min per hour for cumulative counters)
-    grouped = df.groupby("hour").agg(
-        total_active_start=("total_active_energy", "first"),
-        total_active_end=("total_active_energy", "last"),
-        total_return_start=("total_return_energy", "first"),
-        total_return_end=("total_return_energy", "last"),
-    ).reset_index()
+    grouped = (
+        df.groupby("hour")
+        .agg(
+            total_active_start=("total_active_energy", "first"),
+            total_active_end=("total_active_energy", "last"),
+            total_return_start=("total_return_energy", "first"),
+            total_return_end=("total_return_energy", "last"),
+        )
+        .reset_index()
+    )
 
     grouped["total_active_kwh"] = (grouped["total_active_end"] - grouped["total_active_start"]) / 1000
     grouped["total_return_kwh"] = (grouped["total_return_end"] - grouped["total_return_start"]) / 1000

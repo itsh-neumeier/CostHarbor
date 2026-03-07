@@ -8,16 +8,15 @@ import email
 import imaplib
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 from urllib.parse import urlparse
 
 import httpx
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.sources.models import ImportJob, ImportedFile, SourceConnection
+from app.sources.models import ImportedFile, ImportJob, SourceConnection
 
 logger = logging.getLogger(__name__)
 
@@ -93,8 +92,12 @@ def fetch_vrm_emails(db: Session, job: ImportJob, source: SourceConnection) -> N
 
 
 def _process_email(
-    db: Session, job: ImportJob, source: SourceConnection,
-    conn: imaplib.IMAP4, msg_id: bytes, link_pattern: str,
+    db: Session,
+    job: ImportJob,
+    source: SourceConnection,
+    conn: imaplib.IMAP4,
+    msg_id: bytes,
+    link_pattern: str,
 ) -> None:
     """Process a single VRM email: extract link, download CSV."""
     status, msg_data = conn.fetch(msg_id, "(RFC822)")
@@ -107,7 +110,6 @@ def _process_email(
     subject = str(email.header.decode_header(msg["Subject"])[0][0] or "")
     if isinstance(subject, bytes):
         subject = subject.decode("utf-8", errors="replace")
-    sender = msg.get("From", "")
     date_str = msg.get("Date", "")
 
     # Extract body text
@@ -201,6 +203,6 @@ def _parse_email_date(date_str: str) -> datetime | None:
     """Parse email date header."""
     try:
         parsed = email.utils.parsedate_to_datetime(date_str)
-        return parsed.astimezone(timezone.utc)
+        return parsed.astimezone(UTC)
     except Exception:
         return None

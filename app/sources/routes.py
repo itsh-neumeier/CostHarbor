@@ -9,24 +9,31 @@ from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import require_auth
 from app.audit.models import AuditLog
+from app.auth.dependencies import require_auth
 from app.config import settings
 from app.core.models import Site, Unit
 from app.database import get_db
-from app.sources.models import EntityMapping, ImportJob, ImportedFile, SourceConnection
+from app.sources.models import EntityMapping, ImportedFile, ImportJob, SourceConnection
 
 router = APIRouter(tags=["sources"])
 
 
 def _audit(db: Session, user: dict, action: str, entity_type: str, entity_id: int | None, request: Request, **kw):
-    db.add(AuditLog(
-        user_id=user["id"], action=action, entity_type=entity_type,
-        entity_id=entity_id, ip_address=request.client.host if request.client else None, **kw,
-    ))
+    db.add(
+        AuditLog(
+            user_id=user["id"],
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            ip_address=request.client.host if request.client else None,
+            **kw,
+        )
+    )
 
 
 # ---- Source Connections ----
+
 
 @router.get("/sources")
 async def sources_list(request: Request, db: Session = Depends(get_db)):
@@ -34,9 +41,15 @@ async def sources_list(request: Request, db: Session = Depends(get_db)):
     if isinstance(user, RedirectResponse):
         return user
     sources = db.query(SourceConnection).order_by(SourceConnection.name).all()
-    return request.app.state.templates.TemplateResponse("sources/list.html", {
-        "request": request, "user": user, "sources": sources, "active_page": "sources",
-    })
+    return request.app.state.templates.TemplateResponse(
+        "sources/list.html",
+        {
+            "request": request,
+            "user": user,
+            "sources": sources,
+            "active_page": "sources",
+        },
+    )
 
 
 @router.get("/sources/new")
@@ -45,9 +58,16 @@ async def source_new(request: Request, db: Session = Depends(get_db)):
     if isinstance(user, RedirectResponse):
         return user
     sites = db.query(Site).order_by(Site.name).all()
-    return request.app.state.templates.TemplateResponse("sources/form.html", {
-        "request": request, "user": user, "source": None, "sites": sites, "active_page": "sources",
-    })
+    return request.app.state.templates.TemplateResponse(
+        "sources/form.html",
+        {
+            "request": request,
+            "user": user,
+            "source": None,
+            "sites": sites,
+            "active_page": "sources",
+        },
+    )
 
 
 @router.post("/sources/new")
@@ -64,7 +84,9 @@ async def source_create(
         return user
     config = json.loads(connection_config_json)
     source = SourceConnection(
-        site_id=site_id, name=name, source_type=source_type,
+        site_id=site_id,
+        name=name,
+        source_type=source_type,
         connection_config_json=config,
     )
     db.add(source)
@@ -81,14 +103,22 @@ async def source_edit(request: Request, source_id: int, db: Session = Depends(ge
         return user
     source = db.get(SourceConnection, source_id)
     sites = db.query(Site).order_by(Site.name).all()
-    return request.app.state.templates.TemplateResponse("sources/form.html", {
-        "request": request, "user": user, "source": source, "sites": sites, "active_page": "sources",
-    })
+    return request.app.state.templates.TemplateResponse(
+        "sources/form.html",
+        {
+            "request": request,
+            "user": user,
+            "source": source,
+            "sites": sites,
+            "active_page": "sources",
+        },
+    )
 
 
 @router.post("/sources/{source_id}/edit")
 async def source_update(
-    request: Request, source_id: int,
+    request: Request,
+    source_id: int,
     site_id: int = Form(...),
     name: str = Form(...),
     source_type: str = Form(...),
@@ -124,6 +154,7 @@ async def source_delete(request: Request, source_id: int, db: Session = Depends(
 
 # ---- Entity Mappings ----
 
+
 @router.get("/sources/mappings")
 async def mappings_list(request: Request, db: Session = Depends(get_db)):
     user = require_auth(request)
@@ -132,10 +163,17 @@ async def mappings_list(request: Request, db: Session = Depends(get_db)):
     mappings = db.query(EntityMapping).order_by(EntityMapping.id).all()
     sources = db.query(SourceConnection).order_by(SourceConnection.name).all()
     units = db.query(Unit).order_by(Unit.name).all()
-    return request.app.state.templates.TemplateResponse("sources/mappings.html", {
-        "request": request, "user": user, "mappings": mappings,
-        "sources": sources, "units": units, "active_page": "mappings",
-    })
+    return request.app.state.templates.TemplateResponse(
+        "sources/mappings.html",
+        {
+            "request": request,
+            "user": user,
+            "mappings": mappings,
+            "sources": sources,
+            "units": units,
+            "active_page": "mappings",
+        },
+    )
 
 
 @router.post("/sources/mappings/new")
@@ -171,8 +209,15 @@ async def mapping_delete(request: Request, mapping_id: int, db: Session = Depend
     if isinstance(user, RedirectResponse):
         return user
     mapping = db.get(EntityMapping, mapping_id)
-    _audit(db, user, "delete", "entity_mapping", mapping.id, request,
-           old_values_json={"entity_id": mapping.entity_id, "entity_type": mapping.entity_type})
+    _audit(
+        db,
+        user,
+        "delete",
+        "entity_mapping",
+        mapping.id,
+        request,
+        old_values_json={"entity_id": mapping.entity_id, "entity_type": mapping.entity_type},
+    )
     db.delete(mapping)
     db.commit()
     return RedirectResponse(url="/sources/mappings", status_code=303)
@@ -180,15 +225,22 @@ async def mapping_delete(request: Request, mapping_id: int, db: Session = Depend
 
 # ---- Imports ----
 
+
 @router.get("/imports")
 async def imports_list(request: Request, db: Session = Depends(get_db)):
     user = require_auth(request)
     if isinstance(user, RedirectResponse):
         return user
     jobs = db.query(ImportJob).order_by(ImportJob.created_at.desc()).all()
-    return request.app.state.templates.TemplateResponse("imports/list.html", {
-        "request": request, "user": user, "jobs": jobs, "active_page": "imports",
-    })
+    return request.app.state.templates.TemplateResponse(
+        "imports/list.html",
+        {
+            "request": request,
+            "user": user,
+            "jobs": jobs,
+            "active_page": "imports",
+        },
+    )
 
 
 @router.get("/imports/upload")
@@ -197,10 +249,16 @@ async def import_upload_form(request: Request, db: Session = Depends(get_db)):
     if isinstance(user, RedirectResponse):
         return user
     sources = db.query(SourceConnection).order_by(SourceConnection.name).all()
-    return request.app.state.templates.TemplateResponse("imports/upload.html", {
-        "request": request, "user": user, "sources": sources,
-        "max_size_mb": settings.max_upload_size_mb, "active_page": "imports",
-    })
+    return request.app.state.templates.TemplateResponse(
+        "imports/upload.html",
+        {
+            "request": request,
+            "user": user,
+            "sources": sources,
+            "max_size_mb": settings.max_upload_size_mb,
+            "active_page": "imports",
+        },
+    )
 
 
 @router.post("/imports/upload")
@@ -216,13 +274,17 @@ async def import_upload(
 
     # Validate file type
     if not file.filename or not file.filename.lower().endswith(".csv"):
-        return request.app.state.templates.TemplateResponse("imports/upload.html", {
-            "request": request, "user": user,
-            "sources": db.query(SourceConnection).order_by(SourceConnection.name).all(),
-            "max_size_mb": settings.max_upload_size_mb,
-            "error": "Nur CSV-Dateien sind erlaubt.",
-            "active_page": "imports",
-        })
+        return request.app.state.templates.TemplateResponse(
+            "imports/upload.html",
+            {
+                "request": request,
+                "user": user,
+                "sources": db.query(SourceConnection).order_by(SourceConnection.name).all(),
+                "max_size_mb": settings.max_upload_size_mb,
+                "error": "Nur CSV-Dateien sind erlaubt.",
+                "active_page": "imports",
+            },
+        )
 
     # Read file content
     content = await file.read()
@@ -230,13 +292,17 @@ async def import_upload(
     # Validate file size
     max_bytes = settings.max_upload_size_mb * 1024 * 1024
     if len(content) > max_bytes:
-        return request.app.state.templates.TemplateResponse("imports/upload.html", {
-            "request": request, "user": user,
-            "sources": db.query(SourceConnection).order_by(SourceConnection.name).all(),
-            "max_size_mb": settings.max_upload_size_mb,
-            "error": f"Datei zu gross. Maximum: {settings.max_upload_size_mb} MB.",
-            "active_page": "imports",
-        })
+        return request.app.state.templates.TemplateResponse(
+            "imports/upload.html",
+            {
+                "request": request,
+                "user": user,
+                "sources": db.query(SourceConnection).order_by(SourceConnection.name).all(),
+                "max_size_mb": settings.max_upload_size_mb,
+                "error": f"Datei zu gross. Maximum: {settings.max_upload_size_mb} MB.",
+                "active_page": "imports",
+            },
+        )
 
     # Save file to upload directory
     upload_dir = Path(settings.upload_dir)
@@ -268,14 +334,22 @@ async def import_upload(
     )
     db.add(imported_file)
 
-    _audit(db, user, "import", "import_job", job.id, request,
-           new_values_json={"filename": file.filename, "size_bytes": len(content)})
+    _audit(
+        db,
+        user,
+        "import",
+        "import_job",
+        job.id,
+        request,
+        new_values_json={"filename": file.filename, "size_bytes": len(content)},
+    )
     db.commit()
 
     return RedirectResponse(url="/imports", status_code=303)
 
 
 # ---- Import Trigger ----
+
 
 @router.post("/imports/{job_id}/run")
 async def import_run(request: Request, job_id: int, db: Session = Depends(get_db)):
@@ -291,9 +365,11 @@ async def import_run(request: Request, job_id: int, db: Session = Depends(get_db
     source = db.get(SourceConnection, job.source_connection_id)
     try:
         from app.sources.adapters import run_import
+
         run_import(db, job, source)
     except Exception as e:
         import logging
+
         logging.getLogger(__name__).exception("Import failed for job %d", job_id)
         job.status = "failed"
         job.error_message = str(e)[:2000]

@@ -2,7 +2,7 @@
 
 import logging
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -25,7 +25,6 @@ async def test_imap_connection(request: Request, source_id: int, db: Session = D
     if not source or source.source_type != "vrm_imap":
         return RedirectResponse(url="/sources", status_code=303)
 
-    from app.sources.adapters.vrm_imap import fetch_vrm_emails
     import imaplib
 
     config = source.connection_config_json or {}
@@ -66,14 +65,21 @@ async def fetch_imap_emails(request: Request, source_id: int, db: Session = Depe
     db.add(job)
     db.flush()
 
-    db.add(AuditLog(
-        user_id=user["id"], action="imap_fetch", entity_type="import_job",
-        entity_id=job.id, ip_address=request.client.host if request.client else None,
-    ))
+    db.add(
+        AuditLog(
+            user_id=user["id"],
+            action="imap_fetch",
+            entity_type="import_job",
+            entity_id=job.id,
+            ip_address=request.client.host if request.client else None,
+        )
+    )
 
     try:
-        from app.sources.adapters.vrm_imap import fetch_vrm_emails
         from datetime import datetime
+
+        from app.sources.adapters.vrm_imap import fetch_vrm_emails
+
         job.status = "running"
         job.started_at = datetime.now()
         db.commit()

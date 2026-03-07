@@ -1,7 +1,7 @@
 """Tests for source models."""
 
 from app.core.models import Site
-from app.sources.models import SourceConnection, EntityMapping
+from app.sources.models import SourceConnection
 
 
 def test_source_connection_creation(db_session):
@@ -10,7 +10,8 @@ def test_source_connection_creation(db_session):
     db_session.flush()
 
     source = SourceConnection(
-        site_id=site.id, name="HA Connection",
+        site_id=site.id,
+        name="HA Connection",
         source_type="homeassistant",
         connection_config_json={"base_url": "http://localhost:8123", "token": "test"},
     )

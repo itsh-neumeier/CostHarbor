@@ -18,9 +18,15 @@ async def documents_list(request: Request, db: Session = Depends(get_db)):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     docs = db.query(Document).order_by(Document.created_at.desc()).limit(100).all()
-    return request.app.state.templates.TemplateResponse("documents/list.html", {
-        "request": request, "user": user, "documents": docs, "active_page": "documents",
-    })
+    return request.app.state.templates.TemplateResponse(
+        "documents/list.html",
+        {
+            "request": request,
+            "user": user,
+            "documents": docs,
+            "active_page": "documents",
+        },
+    )
 
 
 @router.get("/documents/{doc_id}/download")

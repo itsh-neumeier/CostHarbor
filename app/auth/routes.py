@@ -14,10 +14,13 @@ router = APIRouter(tags=["auth"])
 @router.get("/login")
 async def login_page(request: Request):
     templates = request.app.state.templates
-    return templates.TemplateResponse("login.html", {
-        "request": request,
-        "error": None,
-    })
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "error": None,
+        },
+    )
 
 
 @router.post("/login")
@@ -31,10 +34,14 @@ async def login(
     user = db.query(User).filter(User.username == username, User.is_active.is_(True)).first()
 
     if not user or not verify_password(password, user.password_hash):
-        return templates.TemplateResponse("login.html", {
-            "request": request,
-            "error": "Ungueltige Anmeldedaten.",
-        }, status_code=401)
+        return templates.TemplateResponse(
+            "login.html",
+            {
+                "request": request,
+                "error": "Ungueltige Anmeldedaten.",
+            },
+            status_code=401,
+        )
 
     request.session["user"] = {
         "id": user.id,

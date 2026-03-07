@@ -5,13 +5,16 @@ Supports: grid consumption/feedin, PV production, battery charge/discharge, wate
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import httpx
 from sqlalchemy.orm import Session
 
 from app.sources.models import (
-    EntityMapping, ImportJob, NormalizedMeasurement, RawMeasurement,
+    EntityMapping,
+    ImportJob,
+    NormalizedMeasurement,
+    RawMeasurement,
     SourceConnection,
 )
 
@@ -37,9 +40,13 @@ def import_homeassistant(db: Session, job: ImportJob, source: SourceConnection) 
         raise ValueError("Home Assistant base_url and token are required")
 
     # Get entity mappings
-    mappings = db.query(EntityMapping).filter(
-        EntityMapping.source_connection_id == source.id,
-    ).all()
+    mappings = (
+        db.query(EntityMapping)
+        .filter(
+            EntityMapping.source_connection_id == source.id,
+        )
+        .all()
+    )
 
     if not mappings:
         raise ValueError("No entity mappings configured for this source")
@@ -47,14 +54,14 @@ def import_homeassistant(db: Session, job: ImportJob, source: SourceConnection) 
     # Determine time range from job metadata or default to last 31 days
     meta = job.job_metadata_json or {}
     if "start_date" in meta:
-        start_dt = datetime.fromisoformat(meta["start_date"]).replace(tzinfo=timezone.utc)
+        start_dt = datetime.fromisoformat(meta["start_date"]).replace(tzinfo=UTC)
     else:
-        start_dt = (datetime.now(timezone.utc) - timedelta(days=31)).replace(hour=0, minute=0, second=0, microsecond=0)
+        start_dt = (datetime.now(UTC) - timedelta(days=31)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     if "end_date" in meta:
-        end_dt = datetime.fromisoformat(meta["end_date"]).replace(tzinfo=timezone.utc)
+        end_dt = datetime.fromisoformat(meta["end_date"]).replace(tzinfo=UTC)
     else:
-        end_dt = datetime.now(timezone.utc)
+        end_dt = datetime.now(UTC)
 
     headers = {
         "Authorization": f"Bearer {token}",
@@ -72,9 +79,14 @@ def import_homeassistant(db: Session, job: ImportJob, source: SourceConnection) 
 
 
 def _fetch_entity_history(
-    db: Session, job: ImportJob, source: SourceConnection,
-    mapping: EntityMapping, base_url: str, headers: dict,
-    start_dt: datetime, end_dt: datetime,
+    db: Session,
+    job: ImportJob,
+    source: SourceConnection,
+    mapping: EntityMapping,
+    base_url: str,
+    headers: dict,
+    start_dt: datetime,
+    end_dt: datetime,
 ) -> None:
     """Fetch history for a single entity and store normalized measurements."""
     url = (

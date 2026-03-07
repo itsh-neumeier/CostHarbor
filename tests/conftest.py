@@ -1,6 +1,7 @@
 """Test fixtures."""
 
 import os
+
 import pytest
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
@@ -30,10 +31,7 @@ def engine():
             for enum in Base.metadata._sa_enums if hasattr(Base.metadata, "_sa_enums") else []:
                 conn.execute(text(f"DROP TYPE IF EXISTS {enum.name} CASCADE"))
             # Also clean up any remaining custom enum types
-            result = conn.execute(text(
-                "SELECT typname FROM pg_type WHERE typtype = 'e' "
-                "AND typname LIKE '%_enum'"
-            ))
+            result = conn.execute(text("SELECT typname FROM pg_type WHERE typtype = 'e' AND typname LIKE '%_enum'"))
             for row in result:
                 conn.execute(text(f"DROP TYPE IF EXISTS {row[0]} CASCADE"))
             conn.commit()

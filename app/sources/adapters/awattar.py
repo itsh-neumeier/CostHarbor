@@ -5,7 +5,7 @@ Prices are in EUR/MWh and converted to EUR/kWh for storage.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 from sqlalchemy.orm import Session
@@ -38,16 +38,16 @@ def import_awattar_prices(db: Session, job: ImportJob, source: SourceConnection)
     elif "year" in meta and "month" in meta:
         year = int(meta["year"])
         month = int(meta["month"])
-        start_dt = datetime(year, month, 1, tzinfo=timezone.utc)
+        start_dt = datetime(year, month, 1, tzinfo=UTC)
         if month == 12:
-            end_dt = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+            end_dt = datetime(year + 1, 1, 1, tzinfo=UTC)
         else:
-            end_dt = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+            end_dt = datetime(year, month + 1, 1, tzinfo=UTC)
         start_ms = int(start_dt.timestamp() * 1000)
         end_ms = int(end_dt.timestamp() * 1000)
     else:
         # Default: last 31 days
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         end_ms = int(now.timestamp() * 1000)
         start_ms = end_ms - (31 * 24 * 60 * 60 * 1000)
 
@@ -72,15 +72,19 @@ def import_awattar_prices(db: Session, job: ImportJob, source: SourceConnection)
         ts_ms = entry.get("start_timestamp", 0)
         price_mwh = entry.get("marketprice", 0)
 
-        ts = datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc)
+        ts = datetime.fromtimestamp(ts_ms / 1000, tz=UTC)
         price_kwh = price_mwh / 1000  # EUR/MWh -> EUR/kWh
 
         # Check for duplicate
-        existing = db.query(HourlyPrice).filter(
-            HourlyPrice.timestamp == ts,
-            HourlyPrice.source == "awattar",
-            HourlyPrice.region == region,
-        ).first()
+        existing = (
+            db.query(HourlyPrice)
+            .filter(
+                HourlyPrice.timestamp == ts,
+                HourlyPrice.source == "awattar",
+                HourlyPrice.region == region,
+            )
+            .first()
+        )
 
         if existing:
             existing.price_eur_mwh = price_mwh

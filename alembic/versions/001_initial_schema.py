@@ -5,16 +5,18 @@ Revises:
 Create Date: 2026-03-07
 
 """
-from typing import Sequence, Union
 
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 
+from alembic import op
+
 revision: str = "001"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -85,7 +87,9 @@ def upgrade() -> None:
         sa.Column("amount_cents", sa.Integer(), nullable=False),
         sa.Column("currency", sa.String(3), default="EUR"),
         sa.Column("frequency", sa.String(20), default="monthly"),
-        sa.Column("allocation_method", sa.Enum("area", "equal", "fixed", name="allocation_method_enum"), default="area"),
+        sa.Column(
+            "allocation_method", sa.Enum("area", "equal", "fixed", name="allocation_method_enum"), default="area"
+        ),
         sa.Column("start_date", sa.Date(), nullable=True),
         sa.Column("end_date", sa.Date(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
@@ -111,7 +115,11 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("site_id", sa.Integer(), sa.ForeignKey("sites.id", ondelete="CASCADE"), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
-        sa.Column("source_type", sa.Enum("homeassistant", "shelly", "vrm_imap", "vrm_upload", "awattar", name="source_type_enum"), nullable=False),
+        sa.Column(
+            "source_type",
+            sa.Enum("homeassistant", "shelly", "vrm_imap", "vrm_upload", "awattar", name="source_type_enum"),
+            nullable=False,
+        ),
         sa.Column("connection_config_json", JSONB, default={}),
         sa.Column("is_active", sa.Boolean(), default=True),
         sa.Column("last_sync_at", sa.DateTime(timezone=True), nullable=True),
@@ -124,10 +132,27 @@ def upgrade() -> None:
     op.create_table(
         "entity_mappings",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("source_connection_id", sa.Integer(), sa.ForeignKey("source_connections.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "source_connection_id",
+            sa.Integer(),
+            sa.ForeignKey("source_connections.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("unit_id", sa.Integer(), sa.ForeignKey("units.id", ondelete="SET NULL"), nullable=True),
         sa.Column("entity_id", sa.String(500), nullable=False),
-        sa.Column("entity_type", sa.Enum("grid_consumption", "grid_feedin", "battery_charge", "battery_discharge", "pv_production", "water", name="entity_type_enum"), nullable=False),
+        sa.Column(
+            "entity_type",
+            sa.Enum(
+                "grid_consumption",
+                "grid_feedin",
+                "battery_charge",
+                "battery_discharge",
+                "pv_production",
+                "water",
+                name="entity_type_enum",
+            ),
+            nullable=False,
+        ),
         sa.Column("measurement_unit", sa.String(20), default="kWh"),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
@@ -138,8 +163,17 @@ def upgrade() -> None:
     op.create_table(
         "import_jobs",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("source_connection_id", sa.Integer(), sa.ForeignKey("source_connections.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("status", sa.Enum("pending", "running", "completed", "failed", "partial", name="import_status_enum"), default="pending"),
+        sa.Column(
+            "source_connection_id",
+            sa.Integer(),
+            sa.ForeignKey("source_connections.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "status",
+            sa.Enum("pending", "running", "completed", "failed", "partial", name="import_status_enum"),
+            default="pending",
+        ),
         sa.Column("started_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("records_imported", sa.Integer(), default=0),
@@ -170,8 +204,15 @@ def upgrade() -> None:
         "raw_measurements",
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("import_job_id", sa.Integer(), sa.ForeignKey("import_jobs.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("source_connection_id", sa.Integer(), sa.ForeignKey("source_connections.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("entity_mapping_id", sa.Integer(), sa.ForeignKey("entity_mappings.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "source_connection_id",
+            sa.Integer(),
+            sa.ForeignKey("source_connections.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "entity_mapping_id", sa.Integer(), sa.ForeignKey("entity_mappings.id", ondelete="SET NULL"), nullable=True
+        ),
         sa.Column("timestamp", sa.DateTime(timezone=True), nullable=False),
         sa.Column("value_raw", sa.Float(), nullable=False),
         sa.Column("unit", sa.String(20), default="kWh"),
@@ -183,9 +224,23 @@ def upgrade() -> None:
     op.create_table(
         "normalized_measurements",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("raw_measurement_id", sa.Integer(), sa.ForeignKey("raw_measurements.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "raw_measurement_id", sa.Integer(), sa.ForeignKey("raw_measurements.id", ondelete="SET NULL"), nullable=True
+        ),
         sa.Column("unit_id", sa.Integer(), sa.ForeignKey("units.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("measurement_type", sa.Enum("grid_consumption_kwh", "grid_feedin_kwh", "battery_charge_kwh", "battery_discharge_kwh", "pv_production_kwh", "water_m3", name="measurement_type_enum"), nullable=False),
+        sa.Column(
+            "measurement_type",
+            sa.Enum(
+                "grid_consumption_kwh",
+                "grid_feedin_kwh",
+                "battery_charge_kwh",
+                "battery_discharge_kwh",
+                "pv_production_kwh",
+                "water_m3",
+                name="measurement_type_enum",
+            ),
+            nullable=False,
+        ),
         sa.Column("timestamp", sa.DateTime(timezone=True), nullable=False),
         sa.Column("value", sa.Float(), nullable=False),
         sa.Column("measurement_unit", sa.String(20), default="kWh"),
@@ -213,7 +268,11 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column("site_id", sa.Integer(), sa.ForeignKey("sites.id", ondelete="CASCADE"), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
-        sa.Column("rule_type", sa.Enum("grid_dynamic", "grid_fixed", "pv_self", "battery", "feedin", name="pricing_rule_type_enum"), nullable=False),
+        sa.Column(
+            "rule_type",
+            sa.Enum("grid_dynamic", "grid_fixed", "pv_self", "battery", "feedin", name="pricing_rule_type_enum"),
+            nullable=False,
+        ),
         sa.Column("parameters_json", JSONB, default={}),
         sa.Column("valid_from", sa.DateTime(timezone=True), nullable=True),
         sa.Column("valid_to", sa.DateTime(timezone=True), nullable=True),
@@ -248,8 +307,22 @@ def upgrade() -> None:
     op.create_table(
         "calculation_line_items",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("calculation_run_id", sa.Integer(), sa.ForeignKey("calculation_runs.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("category", sa.Enum("electricity_grid", "electricity_pv", "electricity_battery", "electricity_feedin", "water", "fixed_cost", name="line_item_category_enum"), nullable=False),
+        sa.Column(
+            "calculation_run_id", sa.Integer(), sa.ForeignKey("calculation_runs.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column(
+            "category",
+            sa.Enum(
+                "electricity_grid",
+                "electricity_pv",
+                "electricity_battery",
+                "electricity_feedin",
+                "water",
+                "fixed_cost",
+                name="line_item_category_enum",
+            ),
+            nullable=False,
+        ),
         sa.Column("description", sa.String(500), nullable=False),
         sa.Column("quantity", sa.Float(), default=0),
         sa.Column("quantity_unit", sa.String(20), default="kWh"),
@@ -264,7 +337,9 @@ def upgrade() -> None:
     op.create_table(
         "documents",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("calculation_run_id", sa.Integer(), sa.ForeignKey("calculation_runs.id", ondelete="SET NULL"), nullable=True),
+        sa.Column(
+            "calculation_run_id", sa.Integer(), sa.ForeignKey("calculation_runs.id", ondelete="SET NULL"), nullable=True
+        ),
         sa.Column("document_type", sa.Enum("invoice_pdf", "preview", name="document_type_enum"), default="invoice_pdf"),
         sa.Column("filename", sa.String(500), nullable=False),
         sa.Column("stored_path", sa.String(1000), nullable=False),
@@ -311,8 +386,14 @@ def downgrade() -> None:
 
     # Drop enums
     for enum_name in [
-        "allocation_method_enum", "source_type_enum", "entity_type_enum",
-        "import_status_enum", "measurement_type_enum", "pricing_rule_type_enum",
-        "calc_status_enum", "line_item_category_enum", "document_type_enum",
+        "allocation_method_enum",
+        "source_type_enum",
+        "entity_type_enum",
+        "import_status_enum",
+        "measurement_type_enum",
+        "pricing_rule_type_enum",
+        "calc_status_enum",
+        "line_item_category_enum",
+        "document_type_enum",
     ]:
         sa.Enum(name=enum_name).drop(op.get_bind(), checkfirst=True)
