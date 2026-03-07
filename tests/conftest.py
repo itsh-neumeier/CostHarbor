@@ -2,7 +2,7 @@
 
 import os
 import pytest
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker
 
 # Use SQLite for tests if no PostgreSQL available
@@ -24,6 +24,19 @@ def engine():
     Base.metadata.create_all(eng)
     yield eng
     Base.metadata.drop_all(eng)
+    # Drop PostgreSQL enum types that SQLAlchemy doesn't clean up automatically
+    if "postgresql" in TEST_DATABASE_URL:
+        with eng.connect() as conn:
+            for enum in Base.metadata._sa_enums if hasattr(Base.metadata, "_sa_enums") else []:
+                conn.execute(text(f"DROP TYPE IF EXISTS {enum.name} CASCADE"))
+            # Also clean up any remaining custom enum types
+            result = conn.execute(text(
+                "SELECT typname FROM pg_type WHERE typtype = 'e' "
+                "AND typname LIKE '%_enum'"
+            ))
+            for row in result:
+                conn.execute(text(f"DROP TYPE IF EXISTS {row[0]} CASCADE"))
+            conn.commit()
 
 
 @pytest.fixture
