@@ -13,7 +13,7 @@ RUN groupadd -r costharbor && useradd -r -g costharbor -m costharbor
 WORKDIR /app
 
 # Copy project metadata and install dependencies first (cache-friendly)
-COPY pyproject.toml ./
+COPY pyproject.toml README.md ./
 COPY app/__init__.py ./app/
 COPY app/version.py ./app/
 
