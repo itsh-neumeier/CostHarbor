@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - CostHarbor{% endblock %}
+
+{% block content %}
+{% if not user %}
+<script>window.location.href = '/login';</script>
+{% else %}
+<h2 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard</h2>
+
+<div class="row g-4">
+  <div class="col-md-3">
+    <div class="card text-bg-primary">
+      <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-buildings"></i> Standorte</h5>
+        <p class="card-text display-6">{{ stats.sites | default(0) }}</p>
+        <a href="/sites" class="btn btn-outline-light btn-sm">Verwalten</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-bg-success">
+      <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-door-open"></i> Einheiten</h5>
+        <p class="card-text display-6">{{ stats.units | default(0) }}</p>
+        <a href="/units" class="btn btn-outline-light btn-sm">Verwalten</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-bg-info">
+      <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-people"></i> Mieter</h5>
+        <p class="card-text display-6">{{ stats.tenants | default(0) }}</p>
+        <a href="/tenants" class="btn btn-outline-light btn-sm">Verwalten</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card text-bg-warning">
+      <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-database"></i> Datenquellen</h5>
+        <p class="card-text display-6">{{ stats.sources | default(0) }}</p>
+        <a href="/sources" class="btn btn-outline-dark btn-sm">Verwalten</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mt-2">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-clock-history"></i> Letzte Importe
+      </div>
+      <div class="card-body">
+        {% if recent_imports %}
+        <table class="table table-sm">
+          <thead>
+            <tr><th>Quelle</th><th>Status</th><th>Datum</th><th>Datensaetze</th></tr>
+          </thead>
+          <tbody>
+            {% for imp in recent_imports %}
+            <tr>
+              <td>{{ imp.source_name }}</td>
+              <td><span class="badge bg-{{ 'success' if imp.status == 'completed' else 'danger' if imp.status == 'failed' else 'secondary' }}">{{ imp.status }}</span></td>
+              <td>{{ imp.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+              <td>{{ imp.records_imported }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">Noch keine Importe vorhanden.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-calculator"></i> Letzte Berechnungen
+      </div>
+      <div class="card-body">
+        {% if recent_calculations %}
+        <table class="table table-sm">
+          <thead>
+            <tr><th>Monat</th><th>Einheit</th><th>Status</th><th>Summe</th></tr>
+          </thead>
+          <tbody>
+            {% for calc in recent_calculations %}
+            <tr>
+              <td>{{ calc.billing_month }}</td>
+              <td>{{ calc.unit_name }}</td>
+              <td><span class="badge bg-{{ 'success' if calc.status == 'final' else 'secondary' }}">{{ calc.status }}</span></td>
+              <td>{{ "%.2f"|format(calc.total_amount_cents / 100) }} EUR</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">Noch keine Berechnungen vorhanden.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

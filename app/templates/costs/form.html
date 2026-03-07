@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}{{ "Kostenposition bearbeiten" if item else "Neue Kostenposition" }} - CostHarbor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <h1 class="mb-4">
+      <i class="bi bi-cash-stack"></i>
+      {{ "Kostenposition bearbeiten" if item else "Neue Kostenposition" }}
+    </h1>
+
+    <form method="post" action="{{ '/costs/%s/edit' | format(item.id) if item else '/costs/new' }}">
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="site_id" class="form-label">Standort <span class="text-danger">*</span></label>
+            <select class="form-select" id="site_id" name="site_id" required>
+              <option value="">— Standort w&auml;hlen —</option>
+              {% for site in sites %}
+              <option value="{{ site.id }}"
+                      {% if item and item.site_id == site.id %}selected{% endif %}>
+                {{ site.name }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="name" name="name"
+                   value="{{ item.name if item else '' }}" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="amount_cents" class="form-label">Betrag in Cent <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="amount_cents" name="amount_cents"
+                   min="0" step="1"
+                   value="{{ item.amount_cents if item else '' }}" required>
+            <div class="form-text">Betrag in Cent eingeben (z.B. 12050 = 120,50 &euro;)</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="allocation_method" class="form-label">Umlage-Methode <span class="text-danger">*</span></label>
+            <select class="form-select" id="allocation_method" name="allocation_method" required>
+              <option value="">— Methode w&auml;hlen —</option>
+              <option value="area"
+                      {% if item and item.allocation_method == 'area' %}selected{% endif %}>
+                Fl&auml;chenanteil
+              </option>
+              <option value="equal"
+                      {% if item and item.allocation_method == 'equal' %}selected{% endif %}>
+                Gleichverteilung
+              </option>
+              <option value="fixed"
+                      {% if item and item.allocation_method == 'fixed' %}selected{% endif %}>
+                Festbetrag
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card-footer d-flex justify-content-between">
+          <a href="/costs" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Zur&uuml;ck
+          </a>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg"></i> Speichern
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

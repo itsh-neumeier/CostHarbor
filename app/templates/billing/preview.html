@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Abrechnungsvorschau - CostHarbor{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2><i class="bi bi-eye"></i> Abrechnungsvorschau</h2>
+  <div>
+    <a href="/billing/{{ run.id }}/pdf" class="btn btn-success"><i class="bi bi-file-pdf"></i> PDF herunterladen</a>
+    {% if run.status == 'draft' %}
+    <form method="post" action="/billing/{{ run.id }}/finalize" class="d-inline">
+      <button type="submit" class="btn btn-warning" data-confirm="Berechnung finalisieren?"><i class="bi bi-check-lg"></i> Finalisieren</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-4">
+        <strong>Standort:</strong> {{ site.name if site else '-' }}<br>
+        <strong>Einheit:</strong> {{ unit.name if unit else '-' }}<br>
+        <strong>Mieter:</strong> {{ tenant.name if tenant else '-' }}
+      </div>
+      <div class="col-md-4">
+        <strong>Abrechnungsmonat:</strong> {{ run.billing_month }}<br>
+        <strong>Status:</strong>
+        {% if run.status == 'final' %}<span class="badge bg-success">Final</span>
+        {% else %}<span class="badge bg-warning">Entwurf</span>{% endif %}<br>
+        <strong>App-Version:</strong> {{ run.app_version }}
+      </div>
+      <div class="col-md-4">
+        <strong>Config-Version:</strong> {{ run.config_version }}<br>
+        <strong>Regeln-Version:</strong> {{ run.rules_version }}<br>
+        <strong>Berechnet:</strong> {{ run.calculated_at.strftime('%d.%m.%Y %H:%M') if run.calculated_at else '-' }}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if run.warnings_json %}
+<div class="alert alert-warning">
+  <strong>Warnungen:</strong>
+  <ul class="mb-0">
+    {% for w in run.warnings_json %}
+    <li>{{ w }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<h4>Positionen</h4>
+<table class="table table-bordered">
+  <thead class="table-light">
+    <tr><th>Kategorie</th><th>Beschreibung</th><th class="text-end">Menge</th><th>Einheit</th><th class="text-end">Einzelpreis</th><th class="text-end">Summe</th></tr>
+  </thead>
+  <tbody>
+    {% set ns = namespace(current_cat='') %}
+    {% for item in line_items | sort(attribute='sort_order') %}
+    {% if item.category != ns.current_cat %}
+    {% set ns.current_cat = item.category %}
+    <tr class="table-secondary">
+      <td colspan="6"><strong>
+        {% if item.category == 'electricity_grid' %}Strom (Netz)
+        {% elif item.category == 'electricity_pv' %}Strom (PV)
+        {% elif item.category == 'electricity_battery' %}Strom (Batterie)
+        {% elif item.category == 'electricity_feedin' %}Einspeisung
+        {% elif item.category == 'water' %}Wasser
+        {% elif item.category == 'fixed_cost' %}Nebenkosten
+        {% else %}{{ item.category }}{% endif %}
+      </strong></td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td></td>
+      <td>{{ item.description }}</td>
+      <td class="text-end">{{ "%.2f"|format(item.quantity) }}</td>
+      <td>{{ item.quantity_unit }}</td>
+      <td class="text-end">{{ "%.4f"|format(item.unit_price_cents / 100) }} EUR</td>
+      <td class="text-end">{{ "%.2f"|format(item.total_cents / 100) }} EUR</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr class="table-dark">
+      <td colspan="5" class="text-end"><strong>Gesamtsumme</strong></td>
+      <td class="text-end"><strong>{{ "%.2f"|format(run.total_amount_cents / 100) }} EUR</strong></td>
+    </tr>
+  </tfoot>
+</table>
+{% endblock %}
