@@ -20,7 +20,7 @@ dependencies = [
     "cryptography>=43,<47",
     "httpx>=0.27,<1",
     "pandas>=2.2,<3",
-    "weasyprint>=62,<64",
+    "weasyprint>=62,<69",
     "apscheduler>=3.10,<4",
     "python-dateutil>=2.9,<3",
 ]
