@@ -29,7 +29,7 @@ class SourceConnection(Base):
     site_id: Mapped[int] = mapped_column(ForeignKey("sites.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     source_type: Mapped[str] = mapped_column(
-        Enum("homeassistant", "shelly", "vrm_imap", "vrm_upload", "awattar", name="source_type_enum"),
+        Enum("homeassistant", "shelly", "vrm_imap", "vrm_upload", "vrm_api", "awattar", name="source_type_enum"),
         nullable=False,
     )
     connection_config_json: Mapped[dict] = mapped_column(JsonType, default=dict)

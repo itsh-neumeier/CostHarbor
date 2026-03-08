@@ -39,6 +39,10 @@ def run_import(db: Session, job: ImportJob, source: SourceConnection) -> None:
             from app.sources.adapters.homeassistant import import_homeassistant
 
             import_homeassistant(db, job, source)
+        elif source.source_type == "vrm_api":
+            from app.sources.adapters.vrm_api import import_vrm_api
+
+            import_vrm_api(db, job, source)
         elif source.source_type == "awattar":
             from app.sources.adapters.awattar import import_awattar_prices
 

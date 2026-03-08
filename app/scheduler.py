@@ -20,6 +20,7 @@ DEFAULT_SYNC_INTERVALS = {
     "homeassistant": 60,  # hourly
     "awattar": 1440,  # daily (managed via cron, not interval)
     "vrm_imap": 360,  # every 6 hours
+    "vrm_api": 60,  # hourly (direct API pull)
     "shelly": 60,  # hourly (HTTP poll from device)
     "vrm_upload": 0,  # manual only (file upload)
 }

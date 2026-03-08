@@ -173,12 +173,53 @@ def test_shelly(config: dict) -> dict:
         return {"success": False, "message": f"Verbindungsfehler: {e}"}
 
 
+def test_vrm_api(config: dict) -> dict:
+    """Test VRM API connection by fetching installation info."""
+    access_token = config.get("access_token") or ""
+    installation_id = config.get("installation_id") or ""
+
+    if not access_token:
+        return {"success": False, "message": "access_token fehlt in der Konfiguration."}
+    if not installation_id:
+        return {"success": False, "message": "installation_id fehlt in der Konfiguration."}
+
+    try:
+        with httpx.Client(timeout=15) as client:
+            resp = client.get(
+                f"https://vrmapi.victronenergy.com/v2/installations/{installation_id}/system-overview",
+                headers={"X-Authorization": f"Token {access_token}"},
+            )
+
+        if resp.status_code == 200:
+            data = resp.json()
+            records = data.get("records", {})
+            name = records.get("name", str(installation_id))
+            return {
+                "success": True,
+                "message": f"VRM API Verbindung erfolgreich! Installation: {name}",
+            }
+        elif resp.status_code == 401:
+            return {"success": False, "message": "VRM API: Token ungueltig oder abgelaufen."}
+        elif resp.status_code == 404:
+            return {"success": False, "message": f"VRM API: Installation {installation_id} nicht gefunden."}
+        else:
+            return {"success": False, "message": f"VRM API Fehler: HTTP {resp.status_code}"}
+
+    except httpx.ConnectError:
+        return {"success": False, "message": "VRM API nicht erreichbar."}
+    except httpx.TimeoutException:
+        return {"success": False, "message": "Timeout bei Verbindung zur VRM API."}
+    except Exception as e:
+        return {"success": False, "message": f"Verbindungsfehler: {e}"}
+
+
 def test_connection(source_type: str, config: dict) -> dict:
     """Dispatch connection test based on source type."""
     testers = {
         "homeassistant": test_homeassistant,
         "awattar": test_awattar,
         "vrm_imap": test_vrm_imap,
+        "vrm_api": test_vrm_api,
         "shelly": test_shelly,
     }
 
