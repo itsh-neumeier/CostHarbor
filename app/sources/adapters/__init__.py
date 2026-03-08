@@ -22,10 +22,19 @@ def run_import(db: Session, job: ImportJob, source: SourceConnection) -> None:
             from app.sources.adapters.shelly_csv import import_shelly_csv
 
             import_shelly_csv(db, job, source)
-        elif source.source_type in ("vrm_upload", "vrm_imap"):
+        elif source.source_type == "vrm_upload":
             from app.sources.adapters.vrm_upload import import_vrm_csv
 
             import_vrm_csv(db, job, source)
+        elif source.source_type == "vrm_imap":
+            from app.sources.adapters.vrm_imap import fetch_vrm_emails
+            from app.sources.adapters.vrm_upload import import_vrm_csv
+
+            # Step 1: Fetch CSV files from IMAP mailbox
+            fetch_vrm_emails(db, job, source)
+            # Step 2: Process downloaded CSVs
+            if job.records_imported > 0:
+                import_vrm_csv(db, job, source)
         elif source.source_type == "homeassistant":
             from app.sources.adapters.homeassistant import import_homeassistant
 
