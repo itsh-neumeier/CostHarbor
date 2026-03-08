@@ -20,10 +20,13 @@ COPY app/version.py ./app/
 # Install production dependencies only (not editable, no dev deps)
 RUN pip install --no-cache-dir .
 
-# Copy application code
+# Copy full application code
 COPY alembic.ini ./
 COPY alembic/ ./alembic/
 COPY app/ ./app/
+
+# Reinstall package with all modules (deps already cached above)
+RUN pip install --no-cache-dir --no-deps .
 
 # Create data directories
 RUN mkdir -p /data/uploads /data/documents && \
