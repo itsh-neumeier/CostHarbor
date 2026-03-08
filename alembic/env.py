@@ -21,6 +21,7 @@ if db_url:
 from app.audit.models import AuditLog  # noqa: F401
 from app.auth.models import User  # noqa: F401
 from app.billing.models import CalculationLineItem, CalculationRun, HourlyPrice, PricingRule  # noqa: F401
+from app.billing.parameters import BillingParameters  # noqa: F401
 from app.core.models import RecurringCostItem, Site, Tenant, Unit, WaterRule  # noqa: F401
 from app.database import Base
 from app.documents.models import Document  # noqa: F401

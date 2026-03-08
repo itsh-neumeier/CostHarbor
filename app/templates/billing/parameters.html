@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Abrechnungsparameter - CostHarbor{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2><i class="bi bi-sliders"></i> Abrechnungsparameter</h2>
+  <a href="/billing/parameters/new" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Neuer Parametersatz</a>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+{% if success %}
+<div class="alert alert-success">{{ success }}</div>
+{% endif %}
+
+{% if params_list %}
+<div class="table-responsive">
+  <table class="table table-striped align-middle">
+    <thead>
+      <tr>
+        <th>Standort</th>
+        <th>G&uuml;ltig ab</th>
+        <th>G&uuml;ltig bis</th>
+        <th>Energiepreis</th>
+        <th>Netzentgelt</th>
+        <th>MwSt.</th>
+        <th>Mieteranteil</th>
+        <th>Aktionen</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in params_list %}
+      <tr>
+        <td>{{ p.site_name }}</td>
+        <td>{{ p.param.valid_from.strftime('%d.%m.%Y') }}</td>
+        <td>{{ p.param.valid_to.strftime('%d.%m.%Y') if p.param.valid_to else '&ndash;' }}</td>
+        <td>{{ "%.2f"|format(p.param.energy_price_ct_kwh) }} Ct/kWh</td>
+        <td>{{ "%.2f"|format(p.param.grid_fee_ct_kwh) }} Ct/kWh</td>
+        <td>{{ "%.1f"|format(p.param.vat_rate_pct) }}%</td>
+        <td>{{ "%.0f"|format(p.param.tenant_share * 100) }}%</td>
+        <td>
+          <a href="/billing/parameters/{{ p.param.id }}/edit" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+          <form method="post" action="/billing/parameters/{{ p.param.id }}/delete" class="d-inline">
+            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Parametersatz l&ouml;schen?')"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="alert alert-info">
+  <i class="bi bi-info-circle"></i> Noch keine Abrechnungsparameter konfiguriert.
+  Ohne Parameter wird der Legacy-Modus mit Preisregeln verwendet.
+</div>
+{% endif %}
+{% endblock %}

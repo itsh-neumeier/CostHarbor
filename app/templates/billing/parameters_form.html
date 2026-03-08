@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Parametersatz bearbeiten' if param else 'Neuer Parametersatz' }} - CostHarbor{% endblock %}
+{% block content %}
+<h2><i class="bi bi-sliders"></i> {{ 'Parametersatz bearbeiten' if param else 'Neuer Parametersatz' }}</h2>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+<form method="post" action="{{ '/billing/parameters/' ~ param.id ~ '/edit' if param else '/billing/parameters/new' }}">
+  <div class="row g-4">
+
+    {# ── Allgemein ── #}
+    <div class="col-md-12">
+      <div class="card border-primary">
+        <div class="card-header bg-primary text-white"><i class="bi bi-gear"></i> Allgemein</div>
+        <div class="card-body row g-3">
+          <div class="col-md-4">
+            <label for="site_id" class="form-label">Standort</label>
+            <select class="form-select" id="site_id" name="site_id" required>
+              {% for site in sites %}
+              <option value="{{ site.id }}" {{ 'selected' if param and param.site_id == site.id }}>{{ site.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label for="valid_from" class="form-label">G&uuml;ltig ab</label>
+            <input type="date" class="form-control" id="valid_from" name="valid_from"
+                   value="{{ param.valid_from.isoformat() if param and param.valid_from else '' }}" required>
+          </div>
+          <div class="col-md-2">
+            <label for="valid_to" class="form-label">G&uuml;ltig bis</label>
+            <input type="date" class="form-control" id="valid_to" name="valid_to"
+                   value="{{ param.valid_to.isoformat() if param and param.valid_to else '' }}">
+          </div>
+          <div class="col-md-2">
+            <label for="tenant_share" class="form-label">Mieteranteil</label>
+            <div class="input-group">
+              <input type="number" step="0.01" min="0" max="1" class="form-control" id="tenant_share" name="tenant_share"
+                     value="{{ param.tenant_share if param else 0.5 }}">
+              <span class="input-group-text">= {{ "%.0f"|format((param.tenant_share if param else 0.5) * 100) }}%</span>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label for="vat_rate_pct" class="form-label">MwSt.-Satz</label>
+            <div class="input-group">
+              <input type="number" step="0.1" class="form-control" id="vat_rate_pct" name="vat_rate_pct"
+                     value="{{ param.vat_rate_pct if param else 19.0 }}">
+              <span class="input-group-text">%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Energie ── #}
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-lightning"></i> Energie</div>
+        <div class="card-body row g-3">
+          <div class="col-md-6">
+            <label for="energy_price_ct_kwh" class="form-label">Energiepreis</label>
+            <div class="input-group">
+              <input type="number" step="0.01" class="form-control" id="energy_price_ct_kwh" name="energy_price_ct_kwh"
+                     value="{{ param.energy_price_ct_kwh if param else 8.96 }}">
+              <span class="input-group-text">Ct/kWh</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label for="energy_base_fee_eur_month" class="form-label">Grundgeb&uuml;hr</label>
+            <div class="input-group">
+              <input type="number" step="0.01" class="form-control" id="energy_base_fee_eur_month" name="energy_base_fee_eur_month"
+                     value="{{ param.energy_base_fee_eur_month if param else 3.85 }}">
+              <span class="input-group-text">EUR/Monat</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label for="pv_price_factor" class="form-label">PV-Preisfaktor</label>
+            <div class="input-group">
+              <input type="number" step="0.01" min="0" max="1" class="form-control" id="pv_price_factor" name="pv_price_factor"
+                     value="{{ param.pv_price_factor if param else 0.80 }}">
+              <span class="input-group-text">x Energiepreis</span>
+            </div>
+            <div class="form-text">z.B. 0.80 = 20% Rabatt auf PV-Strom</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Netznutzung ── #}
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-diagram-3"></i> Netznutzung</div>
+        <div class="card-body row g-3">
+          <div class="col-md-6">
+            <label for="grid_fee_ct_kwh" class="form-label">Netzentgelt (Arbeit)</label>
+            <div class="input-group">
+              <input type="number" step="0.01" class="form-control" id="grid_fee_ct_kwh" name="grid_fee_ct_kwh"
+                     value="{{ param.grid_fee_ct_kwh if param else 7.35 }}">
+              <span class="input-group-text">Ct/kWh</span>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label for="grid_fee_base_eur_year" class="form-label">Netzentgelt (Grundpreis)</label>
+            <div class="input-group">
+              <input type="number" step="0.01" class="form-control" id="grid_fee_base_eur_year" name="grid_fee_base_eur_year"
+                     value="{{ param.grid_fee_base_eur_year if param else 95.55 }}">
+              <span class="input-group-text">EUR/Jahr</span>
+            </div>
+            <div class="form-text">Wird monatlich anteilig (/12) berechnet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Umlagen, Abgaben, Steuern ── #}
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-bank"></i> Umlagen, Abgaben &amp; Steuern (UAS)</div>
+        <div class="card-body row g-3">
+          <div class="col-md-2">
+            <label for="uas_konzessionsabgabe" class="form-label">Konzessionsabgabe</label>
+            <div class="input-group">
+              <input type="number" step="0.01" class="form-control" id="uas_konzessionsabgabe" name="uas_konzessionsabgabe"
+                     value="{{ param.uas_konzessionsabgabe if param else 1.32 }}">
+              <span class="input-group-text">Ct</span>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label for="uas_abschaltbare_lasten" class="form-label">Abschaltb. Lasten</label>
+            <div class="input-group">
+              <input type="number" step="0.01" class="form-control" id="uas_abschaltbare_lasten" name="uas_abschaltbare_lasten"
+                     value="{{ param.uas_abschaltbare_lasten if param else 0.0 }}">
+              <span class="input-group-text">Ct</span>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label for="uas_kwk_umlage" class="form-label">KWK-Umlage</label>
+            <div class="input-group">
+              <input type="number" step="0.01" class="form-control" id="uas_kwk_umlage" name="uas_kwk_umlage"
+                     value="{{ param.uas_kwk_umlage if param else 0.28 }}">
+              <span class="input-group-text">Ct</span>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label for="uas_offshore" class="form-label">Offshore-Umlage</label>
+            <div class="input-group">
+              <input type="number" step="0.01" class="form-control" id="uas_offshore" name="uas_offshore"
+                     value="{{ param.uas_offshore if param else 0.82 }}">
+              <span class="input-group-text">Ct</span>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label for="uas_stromsteuer" class="form-label">Stromsteuer</label>
+            <div class="input-group">
+              <input type="number" step="0.01" class="form-control" id="uas_stromsteuer" name="uas_stromsteuer"
+                     value="{{ param.uas_stromsteuer if param else 2.05 }}">
+              <span class="input-group-text">Ct</span>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label for="uas_stromnev" class="form-label">&sect;19 StromNEV</label>
+            <div class="input-group">
+              <input type="number" step="0.01" class="form-control" id="uas_stromnev" name="uas_stromnev"
+                     value="{{ param.uas_stromnev if param else 1.56 }}">
+              <span class="input-group-text">Ct</span>
+            </div>
+          </div>
+          <div class="col-12">
+            <div class="form-text">Alle Werte in Ct/kWh. Werden auf den Netzstrom-Verbrauch angewendet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Sonderpositionen ── #}
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header"><i class="bi bi-star"></i> Sonderpositionen (Investitionsumlage)</div>
+        <div class="card-body row g-3">
+          <div class="col-md-4">
+            <label for="invest_levy_base_ct" class="form-label">Basiswert</label>
+            <div class="input-group">
+              <input type="number" step="0.01" class="form-control" id="invest_levy_base_ct" name="invest_levy_base_ct"
+                     value="{{ param.invest_levy_base_ct if param else 8.0 }}">
+              <span class="input-group-text">Ct</span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <label for="invest_levy_factor" class="form-label">Faktor</label>
+            <input type="number" step="0.001" class="form-control" id="invest_levy_factor" name="invest_levy_factor"
+                   value="{{ param.invest_levy_factor if param else 0.75 }}">
+          </div>
+          <div class="col-md-4">
+            <label for="invest_levy_pv_factor" class="form-label">PV-Faktor</label>
+            <input type="number" step="0.001" class="form-control" id="invest_levy_pv_factor" name="invest_levy_pv_factor"
+                   value="{{ param.invest_levy_pv_factor if param else 0.015 }}">
+          </div>
+          <div class="col-12">
+            <div class="form-text">
+              Investitionsumlage = Basiswert &times; Faktor &times; Verbrauch (kWh)<br>
+              PV-Investitionsumlage = Basiswert &times; PV-Faktor &times; PV-Eigenverbrauch (kWh)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {# ── Buttons ── #}
+    <div class="col-md-12">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Speichern</button>
+      <a href="/billing/parameters" class="btn btn-outline-secondary">Abbrechen</a>
+    </div>
+
+  </div>
+</form>
+{% endblock %}

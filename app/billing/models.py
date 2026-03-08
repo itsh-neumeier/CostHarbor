@@ -73,6 +73,7 @@ class CalculationRun(Base):
     currency: Mapped[str] = mapped_column(String(3), default="EUR")
     warnings_json: Mapped[dict | None] = mapped_column(JsonType, nullable=True)
     errors_json: Mapped[dict | None] = mapped_column(JsonType, nullable=True)
+    vat_summary_json: Mapped[dict | None] = mapped_column(JsonType, nullable=True)
     calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     finalized_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -97,6 +98,10 @@ class CalculationLineItem(Base):
             "electricity_feedin",
             "water",
             "fixed_cost",
+            "energie",
+            "netznutzung",
+            "umlagen",
+            "sonderpositionen",
             name="line_item_category_enum",
         ),
         nullable=False,

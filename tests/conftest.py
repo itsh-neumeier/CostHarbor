@@ -22,6 +22,7 @@ import app.audit.models  # noqa: F401
 # This ensures correct create/drop order
 import app.auth.models  # noqa: F401
 import app.billing.models  # noqa: F401
+import app.billing.parameters  # noqa: F401
 import app.core.models  # noqa: F401
 import app.documents.models  # noqa: F401
 import app.sources.models  # noqa: F401

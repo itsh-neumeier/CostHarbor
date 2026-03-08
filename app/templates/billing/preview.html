@@ -7,7 +7,7 @@
     <a href="/billing/{{ run.id }}/pdf" class="btn btn-success"><i class="bi bi-file-pdf"></i> PDF herunterladen</a>
     {% if run.status == 'draft' %}
     <form method="post" action="/billing/{{ run.id }}/finalize" class="d-inline">
-      <button type="submit" class="btn btn-warning" data-confirm="Berechnung finalisieren?"><i class="bi bi-check-lg"></i> Finalisieren</button>
+      <button type="submit" class="btn btn-warning" onclick="return confirm('Berechnung finalisieren?')"><i class="bi bi-check-lg"></i> Finalisieren</button>
     </form>
     {% endif %}
   </div>
@@ -39,7 +39,7 @@
 
 {% if run.warnings_json %}
 <div class="alert alert-warning">
-  <strong>Warnungen:</strong>
+  <strong><i class="bi bi-exclamation-triangle"></i> Warnungen:</strong>
   <ul class="mb-0">
     {% for w in run.warnings_json %}
     <li>{{ w }}</li>
@@ -48,43 +48,112 @@
 </div>
 {% endif %}
 
+{# Category label map #}
+{% set cat_labels = {
+  'energie': 'Energie',
+  'netznutzung': 'Netznutzung',
+  'umlagen': 'Umlagen, Abgaben & Steuern',
+  'sonderpositionen': 'Sonderpositionen',
+  'electricity_grid': 'Strom (Netz)',
+  'electricity_pv': 'Strom (PV)',
+  'electricity_battery': 'Strom (Batterie)',
+  'electricity_feedin': 'Einspeisung',
+  'water': 'Wasser',
+  'fixed_cost': 'Nebenkosten'
+} %}
+
 <h4>Positionen</h4>
 <table class="table table-bordered">
   <thead class="table-light">
-    <tr><th>Kategorie</th><th>Beschreibung</th><th class="text-end">Menge</th><th>Einheit</th><th class="text-end">Einzelpreis</th><th class="text-end">Summe</th></tr>
+    <tr>
+      <th>Kategorie</th>
+      <th>Beschreibung</th>
+      <th class="text-end">Menge</th>
+      <th>Einheit</th>
+      <th class="text-end">Einzelpreis</th>
+      <th class="text-end">Betrag</th>
+    </tr>
   </thead>
   <tbody>
-    {% set ns = namespace(current_cat='') %}
+    {% set ns = namespace(current_cat='', cat_subtotal=0) %}
     {% for item in line_items | sort(attribute='sort_order') %}
     {% if item.category != ns.current_cat %}
-    {% set ns.current_cat = item.category %}
+      {# Show subtotal of previous category #}
+      {% if ns.current_cat != '' %}
+      <tr class="table-info">
+        <td colspan="5" class="text-end"><em>Zwischensumme {{ cat_labels.get(ns.current_cat, ns.current_cat) }}</em></td>
+        <td class="text-end"><em>{{ "%.2f"|format(ns.cat_subtotal / 100) }} EUR</em></td>
+      </tr>
+      {% endif %}
+      {% set ns.current_cat = item.category %}
+      {% set ns.cat_subtotal = 0 %}
     <tr class="table-secondary">
-      <td colspan="6"><strong>
-        {% if item.category == 'electricity_grid' %}Strom (Netz)
-        {% elif item.category == 'electricity_pv' %}Strom (PV)
-        {% elif item.category == 'electricity_battery' %}Strom (Batterie)
-        {% elif item.category == 'electricity_feedin' %}Einspeisung
-        {% elif item.category == 'water' %}Wasser
-        {% elif item.category == 'fixed_cost' %}Nebenkosten
-        {% else %}{{ item.category }}{% endif %}
-      </strong></td>
+      <td colspan="6"><strong>{{ cat_labels.get(item.category, item.category) }}</strong></td>
     </tr>
     {% endif %}
+    {% set ns.cat_subtotal = ns.cat_subtotal + item.total_cents %}
     <tr>
       <td></td>
       <td>{{ item.description }}</td>
       <td class="text-end">{{ "%.2f"|format(item.quantity) }}</td>
       <td>{{ item.quantity_unit }}</td>
-      <td class="text-end">{{ "%.4f"|format(item.unit_price_cents / 100) }} EUR</td>
+      <td class="text-end">
+        {% if item.unit_price_cents|abs >= 100 %}
+          {{ "%.4f"|format(item.unit_price_cents / 100) }} EUR
+        {% else %}
+          {{ "%.4f"|format(item.unit_price_cents) }} Ct
+        {% endif %}
+      </td>
       <td class="text-end">{{ "%.2f"|format(item.total_cents / 100) }} EUR</td>
     </tr>
     {% endfor %}
+    {# Last category subtotal #}
+    {% if ns.current_cat != '' %}
+    <tr class="table-info">
+      <td colspan="5" class="text-end"><em>Zwischensumme {{ cat_labels.get(ns.current_cat, ns.current_cat) }}</em></td>
+      <td class="text-end"><em>{{ "%.2f"|format(ns.cat_subtotal / 100) }} EUR</em></td>
+    </tr>
+    {% endif %}
   </tbody>
   <tfoot>
+    {% if run.vat_summary_json %}
+    <tr class="table-light">
+      <td colspan="5" class="text-end">Zwischensumme netto</td>
+      <td class="text-end">{{ "%.2f"|format(run.vat_summary_json.total_netto_cents / 100) }} EUR</td>
+    </tr>
+    <tr class="table-light">
+      <td colspan="5" class="text-end">zzgl. {{ "%.1f"|format(run.vat_summary_json.vat_rate_pct) }}% MwSt.</td>
+      <td class="text-end">{{ "%.2f"|format(run.vat_summary_json.total_vat_cents / 100) }} EUR</td>
+    </tr>
+    <tr class="table-dark">
+      <td colspan="5" class="text-end"><strong>Gesamtbetrag brutto</strong></td>
+      <td class="text-end"><strong>{{ "%.2f"|format(run.vat_summary_json.total_brutto_cents / 100) }} EUR</strong></td>
+    </tr>
+    {% else %}
     <tr class="table-dark">
       <td colspan="5" class="text-end"><strong>Gesamtsumme</strong></td>
       <td class="text-end"><strong>{{ "%.2f"|format(run.total_amount_cents / 100) }} EUR</strong></td>
     </tr>
+    {% endif %}
   </tfoot>
 </table>
+
+{% if run.vat_summary_json and run.vat_summary_json.categories %}
+<h5 class="mt-4">MwSt.-&Uuml;bersicht nach Kategorie</h5>
+<table class="table table-sm table-bordered" style="max-width: 600px;">
+  <thead class="table-light">
+    <tr><th>Kategorie</th><th class="text-end">Netto</th><th class="text-end">MwSt.</th><th class="text-end">Brutto</th></tr>
+  </thead>
+  <tbody>
+    {% for cat_key, cat_val in run.vat_summary_json.categories.items() %}
+    <tr>
+      <td>{{ cat_labels.get(cat_key, cat_key) }}</td>
+      <td class="text-end">{{ "%.2f"|format(cat_val.netto_cents / 100) }} EUR</td>
+      <td class="text-end">{{ "%.2f"|format(cat_val.vat_cents / 100) }} EUR</td>
+      <td class="text-end">{{ "%.2f"|format(cat_val.brutto_cents / 100) }} EUR</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
 {% endblock %}
