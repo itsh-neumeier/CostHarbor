@@ -2,7 +2,7 @@
 {% block title %}{{ "Datenquelle bearbeiten" if source else "Neue Datenquelle" }} - CostHarbor{% endblock %}
 {% block content %}
 <h2><i class="bi bi-database"></i> {{ "Datenquelle bearbeiten" if source else "Neue Datenquelle" }}</h2>
-<form method="post" action="{{ '/sources/' ~ source.id ~ '/edit' if source else '/sources/new' }}" class="mt-3">
+<form method="post" action="{{ '/sources/' ~ source.id ~ '/edit' if source else '/sources/new' }}" class="mt-3" id="sourceForm">
   <div class="row g-3">
     <div class="col-md-6">
       <label for="site_id" class="form-label">Standort *</label>
@@ -26,6 +26,20 @@
         {% endfor %}
       </select>
     </div>
+    <div class="col-md-6">
+      <label for="sync_interval_minutes" class="form-label">Auto-Sync Intervall</label>
+      <select class="form-select" id="sync_interval_minutes" name="sync_interval_minutes">
+        <option value="0" {{ 'selected' if not source or source.sync_interval_minutes == 0 }}>Deaktiviert (manuell)</option>
+        <option value="15" {{ 'selected' if source and source.sync_interval_minutes == 15 }}>Alle 15 Minuten</option>
+        <option value="30" {{ 'selected' if source and source.sync_interval_minutes == 30 }}>Alle 30 Minuten</option>
+        <option value="60" {{ 'selected' if source and source.sync_interval_minutes == 60 }}>Stuendlich</option>
+        <option value="360" {{ 'selected' if source and source.sync_interval_minutes == 360 }}>Alle 6 Stunden</option>
+        <option value="1440" {{ 'selected' if source and source.sync_interval_minutes == 1440 }}>Taeglich</option>
+      </select>
+      <div class="form-text">
+        <strong>Empfohlen:</strong> Home Assistant = stuendlich, aWATTar = taeglich (14:30 CET), VRM IMAP = alle 6 Stunden
+      </div>
+    </div>
     <div class="col-md-12">
       <label for="connection_config_json" class="form-label">Verbindungskonfiguration (JSON)</label>
       <textarea class="form-control font-monospace" id="connection_config_json" name="connection_config_json" rows="8">{{ source.connection_config_json | tojson(indent=2) if source and source.connection_config_json else '{}' }}</textarea>
@@ -37,9 +51,57 @@
       </div>
     </div>
   </div>
-  <div class="mt-3">
-    <button type="submit" class="btn btn-primary">Speichern</button>
+
+  <!-- Connection test result -->
+  <div id="testResult" class="mt-3 d-none">
+    <div id="testAlert" class="alert" role="alert">
+      <span id="testIcon"></span> <span id="testMessage"></span>
+    </div>
+  </div>
+
+  <div class="mt-3 d-flex gap-2">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg"></i> Speichern
+    </button>
+    <button type="button" class="btn btn-outline-info" id="testBtn" onclick="testConnection()">
+      <i class="bi bi-plug"></i> Verbindung testen
+    </button>
     <a href="/sources" class="btn btn-secondary">Abbrechen</a>
   </div>
 </form>
+
+<script>
+async function testConnection() {
+  var btn = document.getElementById('testBtn');
+  var resultDiv = document.getElementById('testResult');
+  var alertDiv = document.getElementById('testAlert');
+  var iconSpan = document.getElementById('testIcon');
+  var msgSpan = document.getElementById('testMessage');
+
+  btn.disabled = true;
+  btn.textContent = 'Teste...';
+  resultDiv.classList.remove('d-none');
+  alertDiv.className = 'alert alert-info';
+  iconSpan.textContent = '';
+  msgSpan.textContent = 'Verbindung wird getestet...';
+
+  var formData = new FormData();
+  formData.append('source_type', document.getElementById('source_type').value);
+  formData.append('connection_config_json', document.getElementById('connection_config_json').value);
+
+  try {
+    var resp = await fetch('/sources/test-connection', { method: 'POST', body: formData });
+    var data = await resp.json();
+
+    alertDiv.className = data.success ? 'alert alert-success' : 'alert alert-danger';
+    msgSpan.textContent = data.message;
+  } catch (err) {
+    alertDiv.className = 'alert alert-danger';
+    msgSpan.textContent = 'Netzwerkfehler: ' + err.message;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Verbindung testen';
+}
+</script>
 {% endblock %}

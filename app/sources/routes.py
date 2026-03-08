@@ -77,22 +77,37 @@ async def source_create(
     name: str = Form(...),
     source_type: str = Form(...),
     connection_config_json: str = Form("{}"),
+    sync_interval_minutes: int = Form(0),
     db: Session = Depends(get_db),
 ):
     user = require_auth(request)
     if isinstance(user, RedirectResponse):
         return user
     config = json.loads(connection_config_json)
+
+    # Set default sync interval if not explicitly provided
+    if sync_interval_minutes == 0:
+        from app.scheduler import DEFAULT_SYNC_INTERVALS
+
+        sync_interval_minutes = DEFAULT_SYNC_INTERVALS.get(source_type, 0)
+
     source = SourceConnection(
         site_id=site_id,
         name=name,
         source_type=source_type,
         connection_config_json=config,
+        sync_interval_minutes=sync_interval_minutes,
     )
     db.add(source)
     db.flush()
     _audit(db, user, "create", "source_connection", source.id, request)
     db.commit()
+
+    # Re-register scheduler jobs
+    from app.scheduler import register_source_jobs
+
+    register_source_jobs()
+
     return RedirectResponse(url="/sources", status_code=303)
 
 
@@ -123,6 +138,7 @@ async def source_update(
     name: str = Form(...),
     source_type: str = Form(...),
     connection_config_json: str = Form("{}"),
+    sync_interval_minutes: int = Form(0),
     db: Session = Depends(get_db),
 ):
     user = require_auth(request)
@@ -134,10 +150,44 @@ async def source_update(
     source.name = name
     source.source_type = source_type
     source.connection_config_json = json.loads(connection_config_json)
+    source.sync_interval_minutes = sync_interval_minutes
     source.config_version += 1
     _audit(db, user, "update", "source_connection", source.id, request, old_values_json=old)
     db.commit()
+
+    # Re-register scheduler jobs
+    from app.scheduler import register_source_jobs
+
+    register_source_jobs()
+
     return RedirectResponse(url="/sources", status_code=303)
+
+
+@router.post("/sources/test-connection")
+async def source_test_connection(
+    request: Request,
+    source_type: str = Form(...),
+    connection_config_json: str = Form("{}"),
+):
+    """Test a data source connection without saving it."""
+    user = require_auth(request)
+    if isinstance(user, RedirectResponse):
+        return user
+
+    try:
+        config = json.loads(connection_config_json)
+    except json.JSONDecodeError:
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse({"success": False, "message": "Ungueltige JSON-Konfiguration."})
+
+    from app.sources.adapters.connection_test import test_connection
+
+    result = test_connection(source_type, config)
+
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse(result)
 
 
 @router.post("/sources/{source_id}/delete")

@@ -1,13 +1,17 @@
 """Shelly Pro 3EM CSV import adapter.
 
-Parses CSV data exported from the Shelly device's /emdata/0/data.csv endpoint.
+Supports two modes:
+1. CSV upload: Parse exported CSV from the device's /emdata/0/data.csv endpoint
+2. HTTP polling: Fetch CSV directly from the Shelly device via network (auto-sync)
+
 Aggregates minute-level phase data into hourly normalized measurements.
 """
 
 import logging
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from io import StringIO
 
+import httpx
 import pandas as pd
 from sqlalchemy.orm import Session
 
@@ -24,14 +28,24 @@ logger = logging.getLogger(__name__)
 
 
 def import_shelly_csv(db: Session, job: ImportJob, source: SourceConnection) -> None:
-    """Parse and import a Shelly Pro 3EM CSV file."""
-    # Get the uploaded file
-    imported_file = db.query(ImportedFile).filter(ImportedFile.import_job_id == job.id).first()
-    if not imported_file:
-        raise ValueError("No file found for this import job")
+    """Parse and import Shelly Pro 3EM data (from file upload or HTTP poll)."""
+    meta = job.job_metadata_json or {}
 
-    with open(imported_file.stored_path, encoding="utf-8-sig") as f:
-        content = f.read()
+    # Check if this is an auto-sync (HTTP poll) or file upload
+    if meta.get("auto_sync") or meta.get("triggered_by") == "scheduler":
+        content = _fetch_shelly_http(source)
+    else:
+        # Get the uploaded file
+        imported_file = db.query(ImportedFile).filter(ImportedFile.import_job_id == job.id).first()
+        if not imported_file:
+            raise ValueError("Keine Datei fuer diesen Import-Job gefunden")
+        with open(imported_file.stored_path, encoding="utf-8-sig") as f:
+            content = f.read()
+
+    if not content or not content.strip():
+        job.status = "completed"
+        job.records_imported = 0
+        return
 
     df = _parse_shelly_csv(content)
     if df.empty:
@@ -183,3 +197,31 @@ def _aggregate_hourly(df: pd.DataFrame) -> pd.DataFrame:
     grouped.loc[grouped["total_return_kwh"] < 0, "total_return_kwh"] = 0
 
     return grouped
+
+
+def _fetch_shelly_http(source: SourceConnection) -> str:
+    """Fetch CSV data directly from a Shelly Pro 3EM device via HTTP."""
+    config = source.connection_config_json or {}
+    device_ip = config.get("device_ip", "")
+
+    if not device_ip:
+        raise ValueError("device_ip fehlt in der Konfiguration")
+
+    # Fetch last 24 hours of data
+    now = datetime.now(UTC)
+    start_ts = int((now - timedelta(hours=24)).timestamp())
+    end_ts = int(now.timestamp())
+
+    url = f"http://{device_ip}/emdata/0/data.csv?ts={start_ts}&end_ts={end_ts}"
+
+    try:
+        with httpx.Client(timeout=30) as client:
+            resp = client.get(url)
+            resp.raise_for_status()
+        return resp.text
+    except httpx.ConnectError as exc:
+        raise ValueError(f"Shelly-Geraet unter {device_ip} nicht erreichbar") from exc
+    except httpx.TimeoutException as exc:
+        raise ValueError(f"Timeout bei Verbindung zu Shelly unter {device_ip}") from exc
+    except httpx.HTTPStatusError as exc:
+        raise ValueError(f"Shelly HTTP-Fehler: {exc.response.status_code}") from exc

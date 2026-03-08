@@ -35,6 +35,7 @@ class SourceConnection(Base):
     connection_config_json: Mapped[dict] = mapped_column(JsonType, default=dict)
     is_active: Mapped[bool] = mapped_column(default=True)
     last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sync_interval_minutes: Mapped[int] = mapped_column(Integer, default=0)
     config_version: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(

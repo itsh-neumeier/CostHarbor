@@ -33,8 +33,15 @@ async def lifespan(app: FastAPI):
 
     create_initial_admin()
 
+    # Start background scheduler for auto-sync jobs
+    from app.scheduler import start_scheduler, stop_scheduler
+
+    start_scheduler()
+
     logger.info("CostHarbor v%s started", VERSION)
     yield
+
+    stop_scheduler()
     logger.info("CostHarbor shutting down")
 
 
