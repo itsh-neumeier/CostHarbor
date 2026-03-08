@@ -60,9 +60,7 @@ def import_vrm_api(db: Session, job: ImportJob, source: SourceConnection) -> Non
     if "start_date" in meta:
         start_dt = datetime.fromisoformat(meta["start_date"]).replace(tzinfo=UTC)
     else:
-        start_dt = (datetime.now(UTC) - timedelta(days=31)).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
+        start_dt = (datetime.now(UTC) - timedelta(days=31)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     if "end_date" in meta:
         end_dt = datetime.fromisoformat(meta["end_date"]).replace(tzinfo=UTC)
@@ -73,11 +71,7 @@ def import_vrm_api(db: Session, job: ImportJob, source: SourceConnection) -> Non
     end_ts = int(end_dt.timestamp())
 
     # Get entity mappings to know which data to fetch
-    mappings = (
-        db.query(EntityMapping)
-        .filter(EntityMapping.source_connection_id == source.id)
-        .all()
-    )
+    mappings = db.query(EntityMapping).filter(EntityMapping.source_connection_id == source.id).all()
 
     # Determine which VRM attribute codes we need
     attr_codes = set()
@@ -114,9 +108,7 @@ def import_vrm_api(db: Session, job: ImportJob, source: SourceConnection) -> Non
         if exc.response.status_code == 401:
             raise ValueError("VRM API: Token ungueltig oder abgelaufen") from exc
         if exc.response.status_code == 404:
-            raise ValueError(
-                f"VRM API: Installation {installation_id} nicht gefunden"
-            ) from exc
+            raise ValueError(f"VRM API: Installation {installation_id} nicht gefunden") from exc
         raise ValueError(f"VRM API Fehler: HTTP {exc.response.status_code}") from exc
     except httpx.ConnectError as exc:
         raise ValueError("VRM API nicht erreichbar") from exc
