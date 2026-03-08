@@ -1,5 +1,7 @@
 # CostHarbor
 
+[![CI](https://github.com/itsh-neumeier/CostHarbor/actions/workflows/ci.yml/badge.svg)](https://github.com/itsh-neumeier/CostHarbor/actions/workflows/ci.yml)
+
 Configurable utility billing and cost allocation web application for properties with solar, battery, and smart metering systems.
 
 ## Features
@@ -21,8 +23,8 @@ Configurable utility billing and cost allocation web application for properties 
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/costharbor.git
-cd costharbor
+git clone https://github.com/itsh-neumeier/CostHarbor.git
+cd CostHarbor
 
 # Configure environment
 cp .env.example .env
@@ -36,6 +38,30 @@ docker-compose up -d
 
 # Access at http://localhost:8000
 ```
+
+### Portainer / Docker Deployment
+
+The pre-built Docker image is available on GitHub Container Registry:
+
+```
+ghcr.io/itsh-neumeier/costharbor:latest
+```
+
+**Deploy as Portainer Stack:**
+
+1. In Portainer, go to **Stacks** > **Add stack**
+2. Upload or paste the contents of `docker-compose.portainer.yml`
+3. Set the following environment variables:
+
+| Variable | Description |
+|---|---|
+| `SECRET_KEY` | Random string, min 32 characters |
+| `ENCRYPTION_KEY` | Fernet key (see generation command above) |
+| `ADMIN_PASSWORD` | Password for the initial admin account |
+| `DB_PASSWORD` | PostgreSQL database password |
+
+4. Click **Deploy the stack**
+5. Access the application at `http://<your-host>:8000`
 
 ### Development Setup
 
