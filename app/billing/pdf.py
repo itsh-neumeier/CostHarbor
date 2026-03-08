@@ -134,7 +134,7 @@ def _build_html(run, site, unit, tenant, ordered_cats, month_name, year) -> str:
     # ── Category tables ──
     cat_html = ""
     for _cat_key, cat_data in ordered_cats:
-        cat_html += f'<h2>{cat_data["label"]}</h2>\n<table>\n'
+        cat_html += f"<h2>{cat_data['label']}</h2>\n<table>\n"
         cat_html += (
             "<tr>"
             "<th>Beschreibung</th>"

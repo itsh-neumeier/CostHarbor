@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def calculate_billing(
     db: Session,
     site_id: int,
@@ -88,11 +89,26 @@ def calculate_billing(
     # --- Electricity ---
     if params:
         sort_order = _calc_with_params(
-            db, run, params, unit_id, period_start, period_end, rules, warnings, sort_order,
+            db,
+            run,
+            params,
+            unit_id,
+            period_start,
+            period_end,
+            rules,
+            warnings,
+            sort_order,
         )
     else:
         sort_order = _calc_legacy(
-            db, run, unit_id, period_start, period_end, rules, warnings, sort_order,
+            db,
+            run,
+            unit_id,
+            period_start,
+            period_end,
+            rules,
+            warnings,
+            sort_order,
         )
 
     # --- Water ---
@@ -117,7 +133,10 @@ def calculate_billing(
     db.flush()
     logger.info(
         "Calculation run %d: %d items, netto %.2f EUR, brutto %.2f EUR",
-        run.id, len(run.line_items), netto_cents / 100, brutto_cents / 100,
+        run.id,
+        len(run.line_items),
+        netto_cents / 100,
+        brutto_cents / 100,
     )
     return run
 
@@ -125,6 +144,7 @@ def calculate_billing(
 # ---------------------------------------------------------------------------
 # BillingParameters lookup
 # ---------------------------------------------------------------------------
+
 
 def _get_billing_params(db: Session, site_id: int, billing_month: str) -> BillingParameters | None:
     """Find BillingParameters valid for the given billing month."""
@@ -145,6 +165,7 @@ def _get_billing_params(db: Session, site_id: int, billing_month: str) -> Billin
 # ---------------------------------------------------------------------------
 # Nebenkostenabrechnung calculation (BillingParameters)
 # ---------------------------------------------------------------------------
+
 
 def _calc_with_params(db, run, params, unit_id, start, end, rules, warnings, so):
     """Full Nebenkostenabrechnung using BillingParameters."""
@@ -169,23 +190,31 @@ def _calc_with_params(db, run, params, unit_id, start, end, rules, warnings, so)
     if grid_kwh > 0:
         so += 1
         cost_ct = grid_kwh * params.energy_price_ct_kwh
-        _add_line(db, run, "energie", "Strombezug Netz",
-                  grid_kwh, "kWh", params.energy_price_ct_kwh, round(cost_ct), so)
+        _add_line(
+            db, run, "energie", "Strombezug Netz", grid_kwh, "kWh", params.energy_price_ct_kwh, round(cost_ct), so
+        )
 
     if pv_self_kwh > 0:
         pv_price_ct = round(params.energy_price_ct_kwh * params.pv_price_factor, 4)
         so += 1
         cost_ct = pv_self_kwh * pv_price_ct
-        _add_line(db, run, "energie",
-                  f"PV-Eigenverbrauch ({params.pv_price_factor * 100:.0f}% Rabatt)",
-                  pv_self_kwh, "kWh", pv_price_ct, round(cost_ct), so,
-                  {"pv_price_factor": params.pv_price_factor})
+        _add_line(
+            db,
+            run,
+            "energie",
+            f"PV-Eigenverbrauch ({params.pv_price_factor * 100:.0f}% Rabatt)",
+            pv_self_kwh,
+            "kWh",
+            pv_price_ct,
+            round(cost_ct),
+            so,
+            {"pv_price_factor": params.pv_price_factor},
+        )
 
     if params.energy_base_fee_eur_month > 0:
         so += 1
         fee_ct = round(params.energy_base_fee_eur_month * 100)
-        _add_line(db, run, "energie", "Grundgebuehr Energie",
-                  1, "Monat", fee_ct, fee_ct, so)
+        _add_line(db, run, "energie", "Grundgebuehr Energie", 1, "Monat", fee_ct, fee_ct, so)
 
     # Einspeiseverguetung (Gutschrift via PricingRule)
     if feedin_kwh > 0:
@@ -194,21 +223,38 @@ def _calc_with_params(db, run, params, unit_id, start, end, rules, warnings, so)
             fp = (feedin_rule.parameters_json or {}).get("price_cents_kwh", 0)
             if fp:
                 so += 1
-                _add_line(db, run, "energie", "Einspeiseverguetung (Gutschrift)",
-                          feedin_kwh, "kWh", -fp, round(-(feedin_kwh * fp)), so)
+                _add_line(
+                    db,
+                    run,
+                    "energie",
+                    "Einspeiseverguetung (Gutschrift)",
+                    feedin_kwh,
+                    "kWh",
+                    -fp,
+                    round(-(feedin_kwh * fp)),
+                    so,
+                )
 
     # ── 2. NETZNUTZUNG ─────────────────────────────────────────
     if grid_kwh > 0 and params.grid_fee_ct_kwh > 0:
         so += 1
         cost_ct = grid_kwh * params.grid_fee_ct_kwh
-        _add_line(db, run, "netznutzung", "Netzentgelt (arbeitsbezogen)",
-                  grid_kwh, "kWh", params.grid_fee_ct_kwh, round(cost_ct), so)
+        _add_line(
+            db,
+            run,
+            "netznutzung",
+            "Netzentgelt (arbeitsbezogen)",
+            grid_kwh,
+            "kWh",
+            params.grid_fee_ct_kwh,
+            round(cost_ct),
+            so,
+        )
 
     if params.grid_fee_base_eur_year > 0:
         so += 1
         monthly_ct = round(params.grid_fee_base_eur_year * 100 / 12, 2)
-        _add_line(db, run, "netznutzung", "Netzentgelt (Grundpreis)",
-                  1, "Monat", monthly_ct, round(monthly_ct), so)
+        _add_line(db, run, "netznutzung", "Netzentgelt (Grundpreis)", 1, "Monat", monthly_ct, round(monthly_ct), so)
 
     # ── 3. UMLAGEN, ABGABEN, STEUERN ──────────────────────────
     # Applied to grid consumption (Netzstrom).  PV-Eigenverbrauch
@@ -226,27 +272,42 @@ def _calc_with_params(db, run, params, unit_id, start, end, rules, warnings, so)
         if rate_ct > 0 and grid_kwh > 0:
             so += 1
             cost_ct = grid_kwh * rate_ct
-            _add_line(db, run, "umlagen", name,
-                      grid_kwh, "kWh", rate_ct, round(cost_ct), so)
+            _add_line(db, run, "umlagen", name, grid_kwh, "kWh", rate_ct, round(cost_ct), so)
 
     # ── 4. SONDERPOSITIONEN ────────────────────────────────────
     if params.invest_levy_base_ct > 0 and params.invest_levy_factor > 0 and total_kwh > 0:
         levy_ct = round(params.invest_levy_base_ct * params.invest_levy_factor, 4)
         so += 1
         cost_ct = total_kwh * levy_ct
-        _add_line(db, run, "sonderpositionen", "Investitionsumlage",
-                  total_kwh, "kWh", levy_ct, round(cost_ct), so,
-                  {"base_ct": params.invest_levy_base_ct,
-                   "factor": params.invest_levy_factor})
+        _add_line(
+            db,
+            run,
+            "sonderpositionen",
+            "Investitionsumlage",
+            total_kwh,
+            "kWh",
+            levy_ct,
+            round(cost_ct),
+            so,
+            {"base_ct": params.invest_levy_base_ct, "factor": params.invest_levy_factor},
+        )
 
     if params.invest_levy_pv_factor > 0 and pv_self_kwh > 0:
         pv_levy_ct = round(params.invest_levy_base_ct * params.invest_levy_pv_factor, 4)
         so += 1
         cost_ct = pv_self_kwh * pv_levy_ct
-        _add_line(db, run, "sonderpositionen", "PV-Investitionsumlage",
-                  pv_self_kwh, "kWh", pv_levy_ct, round(cost_ct), so,
-                  {"base_ct": params.invest_levy_base_ct,
-                   "pv_factor": params.invest_levy_pv_factor})
+        _add_line(
+            db,
+            run,
+            "sonderpositionen",
+            "PV-Investitionsumlage",
+            pv_self_kwh,
+            "kWh",
+            pv_levy_ct,
+            round(cost_ct),
+            so,
+            {"base_ct": params.invest_levy_base_ct, "pv_factor": params.invest_levy_pv_factor},
+        )
 
     return so
 
@@ -254,6 +315,7 @@ def _calc_with_params(db, run, params, unit_id, start, end, rules, warnings, so)
 # ---------------------------------------------------------------------------
 # Legacy PricingRule-based calculation
 # ---------------------------------------------------------------------------
+
 
 def _calc_legacy(db, run, unit_id, start, end, rules, warnings, so):
     """Legacy calculation using PricingRules (backward compatibility)."""
@@ -289,8 +351,15 @@ def _calc_grid(db, run, unit_id, start, end, rules, warnings, so):
         so += 1
         avg_price = total_cost / total_kwh if total_kwh else 0
         _add_line(
-            db, run, "electricity_grid", "Netzbezug (dynamisch)",
-            total_kwh, "kWh", avg_price, total_cost, so,
+            db,
+            run,
+            "electricity_grid",
+            "Netzbezug (dynamisch)",
+            total_kwh,
+            "kWh",
+            avg_price,
+            total_cost,
+            so,
             {"pricing": "dynamic", "markup_cents": markup},
         )
 
@@ -299,8 +368,7 @@ def _calc_grid(db, run, unit_id, start, end, rules, warnings, so):
         price = params.get("price_cents_kwh", 30)
         total_kwh = sum(m.value for m in measurements)
         so += 1
-        _add_line(db, run, "electricity_grid", "Netzbezug (Festpreis)",
-                  total_kwh, "kWh", price, total_kwh * price, so)
+        _add_line(db, run, "electricity_grid", "Netzbezug (Festpreis)", total_kwh, "kWh", price, total_kwh * price, so)
     else:
         total_kwh = sum(m.value for m in measurements)
         warnings.append(f"Keine Preisregel fuer Netzbezug ({total_kwh:.1f} kWh)")
@@ -310,8 +378,7 @@ def _calc_grid(db, run, unit_id, start, end, rules, warnings, so):
         bf = (rule.parameters_json or {}).get("base_fee_cents", 0)
         if bf:
             so += 1
-            _add_line(db, run, "electricity_grid", "Grundgebuehr Strom",
-                      1, "Monat", bf, bf, so)
+            _add_line(db, run, "electricity_grid", "Grundgebuehr Strom", 1, "Monat", bf, bf, so)
     return so
 
 
@@ -324,8 +391,7 @@ def _calc_pv(db, run, unit_id, start, end, rules, warnings, so):
     total = sum(m.value for m in measurements)
     if total > 0 and price:
         so += 1
-        _add_line(db, run, "electricity_pv", "PV-Eigenverbrauch",
-                  total, "kWh", price, total * price, so)
+        _add_line(db, run, "electricity_pv", "PV-Eigenverbrauch", total, "kWh", price, total * price, so)
     return so
 
 
@@ -342,8 +408,7 @@ def _calc_battery(db, run, unit_id, start, end, rules, warnings, so):
         total = sum(m.value for m in ms)
         if total > 0 and price:
             so += 1
-            _add_line(db, run, "electricity_battery", desc,
-                      total, "kWh", price, total * price, so)
+            _add_line(db, run, "electricity_battery", desc, total, "kWh", price, total * price, so)
     return so
 
 
@@ -357,8 +422,15 @@ def _calc_feedin(db, run, unit_id, start, end, rules, warnings, so):
     if total > 0 and price:
         so += 1
         _add_line(
-            db, run, "electricity_feedin", "Netzeinspeisung (Gutschrift)",
-            total, "kWh", -price, -(total * price), so,
+            db,
+            run,
+            "electricity_feedin",
+            "Netzeinspeisung (Gutschrift)",
+            total,
+            "kWh",
+            -price,
+            -(total * price),
+            so,
         )
     return so
 
@@ -366,6 +438,7 @@ def _calc_feedin(db, run, unit_id, start, end, rules, warnings, so):
 # ---------------------------------------------------------------------------
 # Water & fixed costs (shared by both modes)
 # ---------------------------------------------------------------------------
+
 
 def _calc_water(db, run, site_id, unit_id, start, end, warnings, so):
     all_water = _get_measurements(db, unit_id, "water_m3", start, end)
@@ -393,9 +466,9 @@ def _calc_water(db, run, site_id, unit_id, start, end, warnings, so):
     price = water_rule.water_price_cents_m3
     if unit_m3 > 0 and price:
         so += 1
-        _add_line(db, run, "water",
-                  f"Wasserverbrauch ({ratio * 100:.0f}%)",
-                  unit_m3, "m\u00b3", price, unit_m3 * price, so)
+        _add_line(
+            db, run, "water", f"Wasserverbrauch ({ratio * 100:.0f}%)", unit_m3, "m\u00b3", price, unit_m3 * price, so
+        )
     return so
 
 
@@ -419,9 +492,15 @@ def _calc_fixed(db, run, site, unit, warnings, so):
         allocated = round(ci.amount_cents * ratio)
         so += 1
         _add_line(
-            db, run, "fixed_cost",
+            db,
+            run,
+            "fixed_cost",
             f"{ci.name} ({ratio * 100:.1f}%)",
-            1, "Monat", allocated, allocated, so,
+            1,
+            "Monat",
+            allocated,
+            allocated,
+            so,
             {"method": ci.allocation_method, "ratio": ratio},
         )
     return so
@@ -430,6 +509,7 @@ def _calc_fixed(db, run, site, unit, warnings, so):
 # ---------------------------------------------------------------------------
 # VAT calculation
 # ---------------------------------------------------------------------------
+
 
 def _calc_vat_summary(line_items: list[CalculationLineItem], vat_rate_pct: float) -> dict:
     """Calculate VAT grouped by category.
@@ -477,6 +557,7 @@ def _calc_vat_summary(line_items: list[CalculationLineItem], vat_rate_pct: float
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_measurements(db: Session, unit_id: int, mtype: str, start: datetime, end: datetime):
     return (
         db.query(NormalizedMeasurement)
@@ -498,8 +579,7 @@ def _find_rule(rules: list[PricingRule], rule_type: str) -> PricingRule | None:
     return None
 
 
-def _add_line(db, run, category, description, quantity, qty_unit,
-              price_cents, total_cents, sort_order, metadata=None):
+def _add_line(db, run, category, description, quantity, qty_unit, price_cents, total_cents, sort_order, metadata=None):
     item = CalculationLineItem(
         calculation_run_id=run.id,
         category=category,
@@ -518,19 +598,24 @@ def _add_line(db, run, category, description, quantity, qty_unit,
 def _make_rules_hash(rules: list[PricingRule], params: BillingParameters | None) -> str:
     """Create a reproducible hash of all pricing config."""
     data = json.dumps(
-        [r.parameters_json for r in rules], sort_keys=True, default=str,
+        [r.parameters_json for r in rules],
+        sort_keys=True,
+        default=str,
     ).encode()
     h = hashlib.md5(data).hexdigest()[:8]
 
     if params:
-        pdata = json.dumps({
-            "id": params.id,
-            "energy_price_ct_kwh": params.energy_price_ct_kwh,
-            "grid_fee_ct_kwh": params.grid_fee_ct_kwh,
-            "vat_rate_pct": params.vat_rate_pct,
-            "tenant_share": params.tenant_share,
-            "updated_at": str(params.updated_at),
-        }, sort_keys=True).encode()
+        pdata = json.dumps(
+            {
+                "id": params.id,
+                "energy_price_ct_kwh": params.energy_price_ct_kwh,
+                "grid_fee_ct_kwh": params.grid_fee_ct_kwh,
+                "vat_rate_pct": params.vat_rate_pct,
+                "tenant_share": params.tenant_share,
+                "updated_at": str(params.updated_at),
+            },
+            sort_keys=True,
+        ).encode()
         h = f"{h}_{hashlib.md5(pdata).hexdigest()[:8]}"
 
     return h

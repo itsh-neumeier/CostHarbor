@@ -223,11 +223,7 @@ async def parameters_list(request: Request, db: Session = Depends(get_db)):
     user, redirect = _require_auth(request)
     if redirect:
         return redirect
-    params = (
-        db.query(BillingParameters)
-        .order_by(BillingParameters.valid_from.desc())
-        .all()
-    )
+    params = db.query(BillingParameters).order_by(BillingParameters.valid_from.desc()).all()
     params_list = []
     for p in params:
         site = db.get(Site, p.site_id)
